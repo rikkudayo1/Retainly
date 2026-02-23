@@ -1,65 +1,238 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Brain, Zap, BookOpen, LayoutGrid, ArrowRight, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const features = [
+  {
+    icon: <Sparkles className="w-5 h-5" />,
+    title: "AI Summaries",
+    description: "Paste any text or upload a file and get a sharp, concise summary in seconds.",
+    href: "/summary",
+  },
+  {
+    icon: <Zap className="w-5 h-5" />,
+    title: "Smart Quizzes",
+    description: "Auto-generated multiple choice quizzes with instant feedback and score tracking.",
+    href: "/quiz",
+  },
+  {
+    icon: <LayoutGrid className="w-5 h-5" />,
+    title: "Flashcard Decks",
+    description: "Anki-style flashcards with hint system and Got it / Unsure / Missed tracking.",
+    href: "/flashcards",
+  },
+  {
+    icon: <BookOpen className="w-5 h-5" />,
+    title: "File Library",
+    description: "Upload your PDFs and text files once, use them across all study tools.",
+    href: "/upload",
+  },
+];
+
+const words = ["Retain", "Remember", "Master", "Absorb", "Learn"];
+
+const HomePage = () => {
+  const router = useRouter();
+  const [wordIndex, setWordIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setWordIndex((i) => (i + 1) % words.length);
+        setVisible(true);
+      }, 400);
+    }, 2200);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-background text-foreground">
+
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
+              linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
+            backgroundSize: "72px 72px",
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+        {/* Dynamic glow using theme variable */}
+        <div
+          className="absolute top-[-10%] left-[50%] -translate-x-1/2 w-[900px] h-[400px] rounded-full blur-[140px]"
+          style={{ backgroundColor: `rgb(var(--theme-glow) / 0.12)` }}
+        />
+        <div
+          className="absolute bottom-0 right-[10%] w-[500px] h-[300px] rounded-full blur-[100px]"
+          style={{ backgroundColor: `rgb(var(--theme-glow) / 0.07)` }}
+        />
+        <div
+          className="absolute top-[30%] left-[-5%] w-[300px] h-[400px] rounded-full blur-[100px]"
+          style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80" />
+      </div>
+
+      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-24 pb-32">
+
+        {/* Badge */}
+        <div className="flex justify-center mb-10">
+          <div
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs backdrop-blur-sm"
+            style={{
+              borderColor: `rgb(var(--theme-glow) / 0.3)`,
+              backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
+              color: "var(--theme-badge-text)",
+            }}
+          >
+            <Brain className="w-3.5 h-3.5" style={{ color: "var(--theme-primary)" }} />
+            AI-powered study assistant
+          </div>
+        </div>
+
+        {/* Hero */}
+        <div className="text-center space-y-6 mb-24">
+          <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-none">
+            <span
+              className="inline-block transition-all duration-300"
+              style={{
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(-12px)",
+              }}
+            >
+              <span
+                className="bg-clip-text text-transparent"
+                style={{ backgroundImage: "var(--theme-gradient)" }}
+              >
+                {words[wordIndex]}
+              </span>
+            </span>
+            <br />
+            <span className="text-foreground">Everything.</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+          {/* Decorative line */}
+          <div className="flex items-center justify-center gap-3">
+            <div
+              className="h-px w-16"
+              style={{ background: `linear-gradient(to right, transparent, rgb(var(--theme-glow) / 0.6))` }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <div
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.6)` }}
+            />
+            <div
+              className="h-px w-16"
+              style={{ background: `linear-gradient(to left, transparent, rgb(var(--theme-glow) / 0.6))` }}
+            />
+          </div>
+
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+            Stop re-reading the same pages. Retainly turns your notes and documents into
+            summaries, quizzes, and flashcards — instantly.
+          </p>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Button
+              size="lg"
+              className="rounded-full px-8 font-semibold hover:opacity-90 transition-opacity"
+              style={{
+                background: "var(--theme-gradient)",
+                color: "var(--theme-button-text)",
+              }}
+              onClick={() => router.push("/upload")}
+            >
+              Get Started <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="rounded-full px-8 hover:opacity-80 transition-opacity"
+              style={{
+                borderColor: `rgb(var(--theme-glow) / 0.4)`,
+                color: "var(--theme-badge-text)",
+              }}
+              onClick={() => router.push("/summary")}
+            >
+              Try a Summary
+            </Button>
+          </div>
         </div>
-      </main>
+
+        {/* Feature cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {features.map((f, i) => (
+            <button
+              key={i}
+              onClick={() => router.push(f.href)}
+              className="group text-left rounded-2xl p-6 backdrop-blur-sm hover:scale-[1.02] transition-all duration-200 hover:shadow-xl border"
+              style={{
+                borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                background: `linear-gradient(135deg, rgb(var(--theme-glow) / 0.08), rgb(var(--theme-glow) / 0.02))`,
+                boxShadow: "0 0 0 transparent",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                  `0 20px 40px rgb(var(--theme-glow) / 0.15)`;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 transparent";
+              }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div
+                  className="rounded-xl p-2.5 border bg-black/20"
+                  style={{
+                    color: "var(--theme-badge-text)",
+                    borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                  }}
+                >
+                  {f.icon}
+                </div>
+                <ArrowRight
+                  className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all -translate-x-1 group-hover:translate-x-0 duration-200"
+                  style={{ color: "var(--theme-primary)" }}
+                />
+              </div>
+              <h3 className="font-bold text-lg mb-1 text-foreground">{f.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Bottom tagline */}
+        <div className="text-center mt-24 space-y-3">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div
+              className="h-px w-12"
+              style={{ background: `linear-gradient(to right, transparent, rgb(var(--theme-glow) / 0.4))` }}
+            />
+            <div
+              className="w-1 h-1 rounded-full"
+              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.4)` }}
+            />
+            <div
+              className="h-px w-12"
+              style={{ background: `linear-gradient(to left, transparent, rgb(var(--theme-glow) / 0.4))` }}
+            />
+          </div>
+          <p
+            className="text-xs uppercase tracking-[0.3em]"
+            style={{ color: `rgb(var(--theme-glow) / 0.5)` }}
+          >
+            Built for students. Powered by AI.
+          </p>
+          <p className="text-xs text-muted-foreground/40">Free. No account required.</p>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default HomePage;
