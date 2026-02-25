@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useGems } from "@/hooks/useGems";
 import { useTheme, ALL_THEMES, ColorTheme } from "@/context/ThemeContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Gem, Sparkles, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -10,40 +11,38 @@ const SPIN_COST = 50;
 
 const GachaPage = () => {
   const router = useRouter();
-  const { gems, spendGems } = useGems();
+  const { gems, spendGems, addGems } = useGems();
   const { unlockedThemes, unlockTheme, setColorTheme } = useTheme();
+  const { t } = useLanguage();
 
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<ColorTheme | null>(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [refundAmount, setRefundAmount] = useState(0);
-  const { addGems } = useGems();
 
-  const lockedThemes = ALL_THEMES.filter((t) => !unlockedThemes.includes(t.id));
+  const lockedThemes = ALL_THEMES.filter((theme) => !unlockedThemes.includes(theme.id));
   const allUnlocked = lockedThemes.length === 0;
 
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (gems < SPIN_COST || allUnlocked) return;
 
-    const success = spendGems(SPIN_COST);
+    const success = await spendGems(SPIN_COST);
     if (!success) return;
 
     setSpinning(true);
     setResult(null);
 
-    setTimeout(() => {
-      // Pick a random locked theme
+    setTimeout(async () => {
       const pick = lockedThemes[Math.floor(Math.random() * lockedThemes.length)];
       const alreadyOwned = unlockedThemes.includes(pick.id);
 
       if (alreadyOwned) {
-        // Consolation refund (shouldn't happen since we filter, but safety net)
         const refund = Math.floor(SPIN_COST * 0.5);
-        addGems(refund);
+        await addGems(refund);
         setIsDuplicate(true);
         setRefundAmount(refund);
       } else {
-        unlockTheme(pick.id);
+        await unlockTheme(pick.id);
         setIsDuplicate(false);
         setRefundAmount(0);
       }
@@ -53,15 +52,15 @@ const GachaPage = () => {
     }, 1800);
   };
 
-  const resultTheme = ALL_THEMES.find((t) => t.id === result);
+  const resultTheme = ALL_THEMES.find((theme) => theme.id === result);
 
   return (
     <div className="min-h-screen bg-background text-foreground px-6 pt-20 pb-16 max-w-3xl mx-auto">
 
       {/* Header */}
       <div className="mb-10">
-        <h1 className="text-4xl font-black mb-1">Gacha</h1>
-        <p className="text-muted-foreground text-sm">Spend gems to unlock new color themes.</p>
+        <h1 className="text-4xl font-black mb-1">{t("gacha.title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("gacha.subtitle")}</p>
         <div className="mt-3 h-px w-12" style={{ background: "var(--theme-gradient)" }} />
       </div>
 
@@ -74,21 +73,19 @@ const GachaPage = () => {
         }}
       >
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: `rgb(var(--theme-glow) / 0.12)` }}
-          >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: `rgb(var(--theme-glow) / 0.12)` }}>
             <Gem className="w-5 h-5" style={{ color: "var(--theme-primary)" }} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest">Your Balance</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest">{t("gacha.balance")}</p>
             <p className="text-2xl font-black" style={{ color: "var(--theme-badge-text)" }}>
-              {gems} <span className="text-sm font-normal text-muted-foreground">gems</span>
+              {gems} <span className="text-sm font-normal text-muted-foreground">{t("gacha.gems")}</span>
             </p>
           </div>
         </div>
         <div className="text-right text-xs text-muted-foreground">
-          <p>Each spin costs</p>
+          <p>{t("gacha.cost")}</p>
           <p className="text-lg font-black" style={{ color: "var(--theme-primary)" }}>💎 {SPIN_COST}</p>
         </div>
       </div>
@@ -101,13 +98,13 @@ const GachaPage = () => {
           background: `linear-gradient(135deg, rgb(var(--theme-glow) / 0.08), rgb(var(--theme-glow) / 0.02))`,
         }}
       >
-        {/* Decorative glow orbs */}
+        {/* Decorative glow orb */}
         <div
           className="absolute top-[-30%] left-[50%] -translate-x-1/2 w-64 h-64 rounded-full blur-[80px] pointer-events-none"
           style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }}
         />
 
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">Theme Banner</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">{t("gacha.banner")}</p>
 
         {/* Spin display */}
         <div
@@ -123,16 +120,10 @@ const GachaPage = () => {
           }}
         >
           {spinning ? (
-            <Sparkles
-              className="w-12 h-12 animate-spin"
-              style={{ color: "var(--theme-primary)" }}
-            />
+            <Sparkles className="w-12 h-12 animate-spin" style={{ color: "var(--theme-primary)" }} />
           ) : result && resultTheme ? (
             <div className="space-y-1">
-              <div
-                className="w-10 h-10 rounded-xl mx-auto"
-                style={{ backgroundColor: resultTheme.color }}
-              />
+              <div className="w-10 h-10 rounded-xl mx-auto" style={{ backgroundColor: resultTheme.color }} />
               <p className="text-xs font-bold text-foreground">{resultTheme.label}</p>
             </div>
           ) : (
@@ -145,15 +136,17 @@ const GachaPage = () => {
           <div className="mb-6 space-y-2">
             {isDuplicate ? (
               <div>
-                <p className="font-bold text-yellow-400">Already owned!</p>
-                <p className="text-xs text-muted-foreground">Refunded 💎 {refundAmount} gems as consolation.</p>
+                <p className="font-bold text-yellow-400">{t("gacha.duplicate")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("gacha.refund")} 💎 {refundAmount} {t("gacha.consolation")}
+                </p>
               </div>
             ) : (
               <div>
                 <p className="font-black text-lg" style={{ color: resultTheme?.color }}>
-                  🎉 {resultTheme?.label} Unlocked!
+                  🎉 {resultTheme?.label} {t("gacha.unlocked")}
                 </p>
-                <p className="text-xs text-muted-foreground">New theme added to your collection.</p>
+                <p className="text-xs text-muted-foreground">{t("gacha.new_theme")}</p>
                 <button
                   onClick={() => { setColorTheme(result); router.push("/"); }}
                   className="mt-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all hover:brightness-110"
@@ -163,7 +156,7 @@ const GachaPage = () => {
                     border: `1px solid ${resultTheme?.color}44`,
                   }}
                 >
-                  Apply Theme →
+                  {t("gacha.apply")}
                 </button>
               </div>
             )}
@@ -174,7 +167,7 @@ const GachaPage = () => {
         {allUnlocked ? (
           <div className="py-3 px-6 rounded-xl text-sm text-muted-foreground border"
             style={{ borderColor: `rgb(var(--theme-glow) / 0.2)` }}>
-            🎊 All themes unlocked!
+            {t("gacha.all_unlocked")}
           </div>
         ) : (
           <button
@@ -187,13 +180,14 @@ const GachaPage = () => {
               textShadow: "0 1px 3px rgba(0,0,0,0.3)",
             }}
           >
-            {spinning ? "Spinning..." : `Spin — 💎 ${SPIN_COST} gems`}
+            {spinning ? t("gacha.spinning") : `${t("gacha.spin")} — 💎 ${SPIN_COST} ${t("gacha.gems")}`}
           </button>
         )}
 
         {gems < SPIN_COST && !allUnlocked && (
           <p className="text-xs text-muted-foreground mt-3">
-            Need {SPIN_COST - gems} more gems · Complete quizzes or flashcards to earn
+            {t("quiz.questions").length > 0 && `${t("gacha.gems")} `}
+            {SPIN_COST - gems} {t("gacha.need_more")}
           </p>
         )}
       </div>
@@ -201,7 +195,7 @@ const GachaPage = () => {
       {/* Theme collection grid */}
       <div>
         <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 mb-4">
-          Your Collection
+          {t("gacha.collection")}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {ALL_THEMES.map((theme) => {
@@ -229,14 +223,12 @@ const GachaPage = () => {
                   {isUnlocked ? theme.label : "???"}
                 </p>
                 {isUnlocked ? (
-                  <span
-                    className="text-[10px] px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: `${theme.color}22`, color: theme.color }}
-                  >
-                    Owned
+                  <span className="text-[10px] px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: `${theme.color}22`, color: theme.color }}>
+                    {t("gacha.owned")}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-muted-foreground/50">Locked</span>
+                  <span className="text-[10px] text-muted-foreground/50">{t("gacha.locked")}</span>
                 )}
               </div>
             );

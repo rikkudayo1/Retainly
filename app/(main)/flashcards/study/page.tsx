@@ -2,28 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
+import { useGems } from "@/hooks/useGems";
 import { Suspense } from "react";
 import { CheckCircle, XCircle, Minus, LayersIcon } from "lucide-react";
 
-interface Flashcard {
-  id: string;
-  keyword: string;
-  hint: string;
-  explanation: string;
-}
-
-interface FlashcardDeck {
-  id: string;
-  title: string;
-  createdAt: string;
-  cards: Flashcard[];
-}
+import { getDeck, DBDeck, DBCard } from "@/lib/db";
 
 type CardState = "keyword" | "hint" | "answer";
 type CardResult = "got_it" | "unsure" | "missed";
 type PageState = "study" | "complete";
-
-const STORAGE_KEY = "retainly_flashcard_decks";
 
 const gradientBtn: React.CSSProperties = {
   background: "var(--theme-gradient)",
@@ -35,30 +23,34 @@ const StudyContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const deckId = searchParams.get("id");
+  const { t } = useLanguage();
+  const { addGems } = useGems();
 
   const [pageState, setPageState] = useState<PageState>("study");
-  const [deck, setDeck] = useState<FlashcardDeck | null>(null);
-  const [studyDeck, setStudyDeck] = useState<Flashcard[]>([]);
+  const [deck, setDeck] = useState<DBDeck | null>(null);
+  const [studyDeck, setStudyDeck] = useState<DBCard[]>([]);
+  const [loadingDeck, setLoadingDeck] = useState(true);
   const [cardState, setCardState] = useState<CardState>("keyword");
   const [gotIt, setGotIt] = useState(0);
   const [missed, setMissed] = useState(0);
   const [unsure, setUnsure] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [gemsEarned, setGemsEarned] = useState(0);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved || !deckId) return;
-    const decks: FlashcardDeck[] = JSON.parse(saved);
-    const found = decks.find((d) => d.id === deckId);
-    if (found) {
-      setDeck(found);
-      setStudyDeck([...found.cards]);
-    }
+    if (!deckId) return;
+    getDeck(deckId).then((found) => {
+      if (found) {
+        setDeck(found);
+        setStudyDeck([...(found.cards ?? [])]);
+      }
+      setLoadingDeck(false);
+    });
   }, [deckId]);
 
   const handleResult = (result: CardResult) => {
     setAnimating(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       const remaining = [...studyDeck];
       const current = remaining[0];
 
@@ -73,6 +65,10 @@ const StudyContent = () => {
       }
 
       if (remaining.length === 0) {
+        // Award gems — 5 per Got it
+        const earned = (gotIt + 1) * 5;
+        await addGems(earned);
+        setGemsEarned(earned);
         setPageState("complete");
         return;
       }
@@ -84,6 +80,20 @@ const StudyContent = () => {
   };
 
   const progress = deck ? (gotIt / (gotIt + studyDeck.length)) * 100 : 0;
+
+  if (loadingDeck) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div
+          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+          style={{
+            borderColor: "var(--theme-primary)",
+            borderTopColor: "transparent",
+          }}
+        />
+      </div>
+    );
+  }
 
   if (!deck) {
     return (
@@ -101,11 +111,10 @@ const StudyContent = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-6 bg-background text-foreground">
         <div className="w-full max-w-xl space-y-6 text-center">
-
           <div className="text-6xl">🎉</div>
 
           <div>
-            <h1 className="text-4xl font-black mb-1">Deck Complete!</h1>
+            <h1 className="text-4xl font-black mb-1">{t("study.complete")}</h1>
             <p className="text-muted-foreground text-sm">{deck.title}</p>
           </div>
 
@@ -129,23 +138,46 @@ const StudyContent = () => {
           <div className="flex justify-center gap-4">
             <div
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ backgroundColor: "rgb(34 197 94 / 0.1)", color: "#22c55e" }}
+              style={{
+                backgroundColor: "rgb(34 197 94 / 0.1)",
+                color: "#22c55e",
+              }}
             >
-              <CheckCircle className="w-4 h-4" /> {gotIt} Got it
+              <CheckCircle className="w-4 h-4" /> {gotIt} {t("study.got_it")}
             </div>
             <div
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ backgroundColor: "rgb(234 179 8 / 0.1)", color: "#eab308" }}
+              style={{
+                backgroundColor: "rgb(234 179 8 / 0.1)",
+                color: "#eab308",
+              }}
             >
-              <Minus className="w-4 h-4" /> {unsure} Unsure
+              <Minus className="w-4 h-4" /> {unsure} {t("study.unsure")}
             </div>
             <div
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ backgroundColor: "rgb(239 68 68 / 0.1)", color: "#ef4444" }}
+              style={{
+                backgroundColor: "rgb(239 68 68 / 0.1)",
+                color: "#ef4444",
+              }}
             >
-              <XCircle className="w-4 h-4" /> {missed} Missed
+              <XCircle className="w-4 h-4" /> {missed} {t("study.missed")}
             </div>
           </div>
+
+          {/* Gems earned */}
+          {gemsEarned > 0 && (
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
+              style={{
+                backgroundColor: `rgb(var(--theme-glow) / 0.15)`,
+                color: "var(--theme-badge-text)",
+                border: `1px solid rgb(var(--theme-glow) / 0.3)`,
+              }}
+            >
+              💎 +{gemsEarned} {t("study.gems_earned")}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
@@ -158,14 +190,14 @@ const StudyContent = () => {
                 backgroundColor: `rgb(var(--theme-glow) / 0.06)`,
               }}
             >
-              View Decks
+              {t("study.view_decks")}
             </button>
             <button
               onClick={() => router.push("/flashcards")}
               className="flex-1 py-3 rounded-xl text-sm font-semibold hover:brightness-110 transition-all"
               style={gradientBtn}
             >
-              New Flashcards
+              {t("study.new_flash")}
             </button>
           </div>
         </div>
@@ -179,10 +211,12 @@ const StudyContent = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6 bg-background text-foreground">
       <div className="w-full max-w-xl space-y-5">
-
         {/* Deck title */}
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <LayersIcon className="w-4 h-4" style={{ color: "var(--theme-primary)" }} />
+          <LayersIcon
+            className="w-4 h-4"
+            style={{ color: "var(--theme-primary)" }}
+          />
           <span className="font-medium">{deck.title}</span>
         </div>
 
@@ -193,20 +227,29 @@ const StudyContent = () => {
         >
           <div
             className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${progress}%`, background: "var(--theme-gradient)" }}
+            style={{
+              width: `${progress}%`,
+              background: "var(--theme-gradient)",
+            }}
           />
         </div>
 
         {/* Score counters */}
         <div className="flex justify-between text-xs font-semibold">
-          <span className="flex items-center gap-1" style={{ color: "#22c55e" }}>
-            <CheckCircle className="w-3.5 h-3.5" /> {gotIt} Got it
+          <span
+            className="flex items-center gap-1"
+            style={{ color: "#22c55e" }}
+          >
+            <CheckCircle className="w-3.5 h-3.5" /> {gotIt} {t("study.got_it")}
           </span>
           <span className="text-muted-foreground">
-            {studyDeck.length} card{studyDeck.length !== 1 ? "s" : ""} left
+            {studyDeck.length} {t("study.remaining")}
           </span>
-          <span className="flex items-center gap-1" style={{ color: "#ef4444" }}>
-            {missed} Missed <XCircle className="w-3.5 h-3.5" />
+          <span
+            className="flex items-center gap-1"
+            style={{ color: "#ef4444" }}
+          >
+            {missed} {t("study.missed")} <XCircle className="w-3.5 h-3.5" />
           </span>
         </div>
 
@@ -229,7 +272,11 @@ const StudyContent = () => {
               backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
             }}
           >
-            {cardState === "keyword" ? "Keyword" : cardState === "hint" ? "Hint" : "Answer"}
+            {cardState === "keyword"
+              ? t("study.keyword")
+              : cardState === "hint"
+                ? t("study.hint")
+                : t("study.answer")}
           </span>
 
           {cardState === "keyword" && (
@@ -282,13 +329,15 @@ const StudyContent = () => {
                   backgroundColor: `rgb(var(--theme-glow) / 0.06)`,
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.12)`;
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    `rgb(var(--theme-glow) / 0.12)`;
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.06)`;
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    `rgb(var(--theme-glow) / 0.06)`;
                 }}
               >
-                Show Hint
+                {t("study.show_hint")}
               </button>
             )}
             <button
@@ -296,7 +345,7 @@ const StudyContent = () => {
               className="flex-1 py-3 rounded-xl text-sm font-semibold hover:brightness-110 transition-all"
               style={gradientBtn}
             >
-              Show Answer
+              {t("study.show_ans")}
             </button>
           </div>
         )}
@@ -313,7 +362,7 @@ const StudyContent = () => {
                 color: "#ef4444",
               }}
             >
-              ✗ Missed
+              {t("study.missed")}
             </button>
             <button
               onClick={() => handleResult("unsure")}
@@ -324,7 +373,7 @@ const StudyContent = () => {
                 color: "#eab308",
               }}
             >
-              ~ Unsure
+              {t("study.unsure")}
             </button>
             <button
               onClick={() => handleResult("got_it")}
@@ -335,7 +384,7 @@ const StudyContent = () => {
                 color: "#22c55e",
               }}
             >
-              ✓ Got it
+              {t("study.got_it")}
             </button>
           </div>
         )}

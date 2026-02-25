@@ -5,6 +5,7 @@ import Main from "./Collapsibles/Main";
 import Generate from "./Collapsibles/Generate";
 import Gacha from "./Collapsibles/Gacha";
 import Link from "next/link";
+import Settings from "./Collapsibles/ProfileSetting";
 import { HomeIcon } from "lucide-react";
 
 const AppSideBarContent = () => {
@@ -34,6 +35,7 @@ const AppSideBarContent = () => {
           <Main />
           <Generate />
           <Gacha />
+          <Settings />
         </div>
       </SidebarGroup>
     </SidebarContent>

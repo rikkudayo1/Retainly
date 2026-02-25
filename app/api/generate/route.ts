@@ -38,29 +38,38 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: `You are a study assistant. When given a text, return ONLY a valid JSON object with no markdown, no backticks, no explanation. Use exactly this structure:
-{
-  "summary": "2-3 sentence summary of the text",
-  "key_concepts": [
-    { "term": "...", "definition": "..." }
-  ],
-  "quiz": [
-    {
-      "question": "...",
-      "choices": ["A. ...", "B. ...", "C. ...", "D. ..."],
-      "answer": "A",
-      "explanation": "Brief explanation of why this is the correct answer"
-    }
-  ],
-  "flashcards": [
-    {
-      "keyword": "...",
-      "hint": "A short one-sentence clue without giving away the answer",
-      "explanation": "Full detailed explanation of the keyword"
-    }
-  ]
-}
-Generate at least 5 key concepts, 10 quiz questions, and 5+ flashcards, flashcards size depends on how much the data are given.`,
+          content: `You are a study assistant. When given a text, return ONLY a valid JSON object with no markdown, no backticks, no explanation. 
+          
+          For the summary field, write in markdown format with:
+          - A # heading for the main topic
+          - ## subheadings for each major section  
+          - **bold** for key terms
+          - Bullet points for lists
+          - Short scannable paragraphs
+
+          Use exactly this structure:
+          {
+            "summary": "Keep paragraphs not too short, understandable, covered all the topics and scannable.",
+            "key_concepts": [
+              { "term": "...", "definition": "..." }
+            ],
+            "quiz": [
+              {
+                "question": "...",
+                "choices": ["A. ...", "B. ...", "C. ...", "D. ..."],
+                "answer": "A",
+                "explanation": "Brief explanation of why this is the correct answer"
+              }
+            ],
+            "flashcards": [
+              {
+                "keyword": "...",
+                "hint": "A short one-sentence clue without giving away the answer",
+                "explanation": "Full detailed explanation of the keyword"
+              }
+            ]
+          }
+          Generate at least 5 key concepts, 10 quiz questions, and 5+ flashcards, flashcards size depends on how much the data are given.`,
         },
         {
           role: "user",

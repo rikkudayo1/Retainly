@@ -3,28 +3,8 @@
 import { useEffect, useState } from "react";
 import { LayersIcon, LayoutGrid, FileText, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-interface StoredFile {
-  id: string;
-  name: string;
-  text: string;
-}
-
-interface Flashcard {
-  id: string;
-  keyword: string;
-  hint: string;
-  explanation: string;
-}
-
-interface FlashcardDeck {
-  id: string;
-  title: string;
-  createdAt: string;
-  cards: Flashcard[];
-}
-
-const STORAGE_KEY = "retainly_flashcard_decks";
+import { useLanguage } from "@/context/LanguageContext";
+import { getFiles, getDecks, saveDeck, DBFile } from "@/lib/db";
 
 const gradientBtn: React.CSSProperties = {
   background: "var(--theme-gradient)",
@@ -34,24 +14,26 @@ const gradientBtn: React.CSSProperties = {
 
 const FlashcardsPage = () => {
   const router = useRouter();
-  const [storedFiles, setStoredFiles] = useState<StoredFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState<StoredFile | null>(null);
+  const { t } = useLanguage();
+  const [storedFiles, setStoredFiles] = useState<DBFile[]>([]);
+  const [selectedFile, setSelectedFile] = useState<DBFile | null>(null);
   const [fileDropdownOpen, setFileDropdownOpen] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState(true);
   const [error, setError] = useState("");
   const [deckTitle, setDeckTitle] = useState("");
   const [deckCount, setDeckCount] = useState(0);
 
+  // Load files and deck count from Supabase on mount
   useEffect(() => {
-    const files = localStorage.getItem("retainly_files");
-    if (files) setStoredFiles(JSON.parse(files));
-
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setDeckCount(JSON.parse(saved).length);
+    Promise.all([getFiles(), getDecks()]).then(([files, decks]) => {
+      setStoredFiles(files);
+      setDeckCount(decks.length);
+      setLoadingFiles(false);
+    });
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = () => setFileDropdownOpen(false);
     if (fileDropdownOpen) document.addEventListener("click", handleClickOutside);
@@ -61,7 +43,7 @@ const FlashcardsPage = () => {
   const handleGenerate = async () => {
     const inputText = selectedFile ? selectedFile.text : pastedText;
     if (!inputText.trim()) {
-      setError("Please select a file or paste some text.");
+      setError(t("flash.error.empty"));
       return;
     }
 
@@ -76,28 +58,26 @@ const FlashcardsPage = () => {
       const data = await res.json();
 
       if (data.success) {
-        const rawCards = data.output.flashcards as Omit<Flashcard, "id">[];
-        const cards: Flashcard[] = rawCards.map((c) => ({
-          ...c,
-          id: crypto.randomUUID(),
-        }));
+        const rawCards = data.output.flashcards as {
+          keyword: string;
+          hint: string;
+          explanation: string;
+        }[];
 
-        const newDeck: FlashcardDeck = {
-          id: crypto.randomUUID(),
-          title: deckTitle.trim() || selectedFile?.name || "Untitled Deck",
-          createdAt: new Date().toISOString(),
-          cards,
-        };
+        const title = deckTitle.trim() || selectedFile?.name || "Untitled Deck";
+        const newDeck = await saveDeck(title, rawCards);
 
-        const existing = localStorage.getItem(STORAGE_KEY);
-        const decks: FlashcardDeck[] = existing ? JSON.parse(existing) : [];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify([newDeck, ...decks]));
+        if (!newDeck) {
+          setError(t("flash.error.failed"));
+          return;
+        }
+
         router.push(`/flashcards/study?id=${newDeck.id}`);
       } else {
-        setError(data.error || "Failed to generate flashcards.");
+        setError(data.error || t("flash.error.failed"));
       }
     } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+      setError(err.message || t("flash.error.failed"));
     } finally {
       setLoading(false);
     }
@@ -109,22 +89,18 @@ const FlashcardsPage = () => {
 
         {/* Header */}
         <div className="text-center space-y-3">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto"
-            style={{ background: `rgb(var(--theme-glow) / 0.1)` }}
-          >
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto"
+            style={{ background: `rgb(var(--theme-glow) / 0.1)` }}>
             <LayoutGrid className="w-7 h-7" style={{ color: "var(--theme-primary)" }} />
           </div>
-          <h1 className="text-3xl font-black">Flashcards</h1>
-          <p className="text-muted-foreground text-sm">
-            Generate flashcards from your notes or files.
-          </p>
+          <h1 className="text-3xl font-black">{t("flash.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("flash.subtitle")}</p>
         </div>
 
         {/* Deck name */}
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-widest text-muted-foreground/60">
-            Deck name (optional)
+            {t("flash.deck_name")}
           </label>
           <input
             className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none border transition-all"
@@ -133,23 +109,22 @@ const FlashcardsPage = () => {
               borderColor: `rgb(var(--theme-glow) / 0.2)`,
               color: "var(--foreground)",
             }}
-            placeholder="e.g. Biology Chapter 3"
+            placeholder={t("flash.deck_ph")}
             value={deckTitle}
             onChange={(e) => setDeckTitle(e.target.value)}
-            onFocus={(e) => {
-              (e.currentTarget as HTMLInputElement).style.borderColor = "var(--theme-primary)";
-            }}
-            onBlur={(e) => {
-              (e.currentTarget as HTMLInputElement).style.borderColor = `rgb(var(--theme-glow) / 0.2)`;
-            }}
+            onFocus={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = "var(--theme-primary)"; }}
+            onBlur={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = `rgb(var(--theme-glow) / 0.2)`; }}
           />
         </div>
 
-        {/* Custom file dropdown */}
-        {storedFiles.length > 0 && (
+        {/* File dropdown — skeleton while loading */}
+        {loadingFiles ? (
+          <div className="h-12 rounded-xl animate-pulse"
+            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }} />
+        ) : storedFiles.length > 0 && (
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-widest text-muted-foreground/60">
-              From your library
+              {t("flash.library")}
             </label>
             <div className="relative mt-2" onClick={(e) => e.stopPropagation()}>
               <button
@@ -157,38 +132,24 @@ const FlashcardsPage = () => {
                 className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-sm border transition-all"
                 style={{
                   backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-                  borderColor: fileDropdownOpen
-                    ? "var(--theme-primary)"
-                    : `rgb(var(--theme-glow) / 0.2)`,
+                  borderColor: fileDropdownOpen ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.2)`,
                   color: selectedFile ? "var(--foreground)" : "var(--muted-foreground)",
                 }}
               >
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 shrink-0" style={{ color: "var(--theme-primary)" }} />
-                  {selectedFile ? selectedFile.name : "Choose a file..."}
+                  {selectedFile ? selectedFile.name : t("quiz.choose")}
                 </div>
-                <ChevronDown
-                  className="w-4 h-4 transition-transform duration-200"
-                  style={{ transform: fileDropdownOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                />
+                <ChevronDown className="w-4 h-4 transition-transform duration-200"
+                  style={{ transform: fileDropdownOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
               </button>
 
               {fileDropdownOpen && (
-                <div
-                  className="absolute z-50 w-full mt-1 rounded-xl border shadow-xl overflow-hidden"
-                  style={{
-                    backgroundColor: "var(--background)",
-                    borderColor: `rgb(var(--theme-glow) / 0.2)`,
-                  }}
-                >
+                <div className="absolute z-50 w-full mt-1 rounded-xl border shadow-xl overflow-hidden"
+                  style={{ backgroundColor: "var(--background)", borderColor: `rgb(var(--theme-glow) / 0.2)` }}>
                   {storedFiles.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => {
-                        setSelectedFile(f);
-                        setPastedText("");
-                        setFileDropdownOpen(false);
-                      }}
+                    <button key={f.id}
+                      onClick={() => { setSelectedFile(f); setPastedText(""); setFileDropdownOpen(false); }}
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left text-muted-foreground transition-all"
                       onMouseEnter={(e) => {
                         (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
@@ -222,7 +183,7 @@ const FlashcardsPage = () => {
         {/* Text input */}
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-widest text-muted-foreground/60">
-            Paste text
+            {t("flash.paste")}
           </label>
           <textarea
             className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none resize-none min-h-[140px] border transition-all"
@@ -230,18 +191,11 @@ const FlashcardsPage = () => {
               backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
               borderColor: `rgb(var(--theme-glow) / 0.2)`,
             }}
-            placeholder="Paste your notes or paragraph here..."
+            placeholder={t("flash.placeholder")}
             value={pastedText}
-            onChange={(e) => {
-              setPastedText(e.target.value);
-              if (e.target.value) setSelectedFile(null);
-            }}
-            onFocus={(e) => {
-              (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--theme-primary)";
-            }}
-            onBlur={(e) => {
-              (e.currentTarget as HTMLTextAreaElement).style.borderColor = `rgb(var(--theme-glow) / 0.2)`;
-            }}
+            onChange={(e) => { setPastedText(e.target.value); if (e.target.value) setSelectedFile(null); }}
+            onFocus={(e) => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--theme-primary)"; }}
+            onBlur={(e) => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = `rgb(var(--theme-glow) / 0.2)`; }}
           />
         </div>
 
@@ -254,7 +208,7 @@ const FlashcardsPage = () => {
           className="w-full py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50 hover:brightness-110"
           style={gradientBtn}
         >
-          {loading ? "Generating Flashcards..." : "Generate Flashcards"}
+          {loading ? t("flash.generating") : t("flash.generate")}
         </button>
 
         {/* View decks link */}
@@ -275,7 +229,7 @@ const FlashcardsPage = () => {
             }}
           >
             <LayersIcon className="w-4 h-4" style={{ color: "var(--theme-primary)" }} />
-            View saved decks ({deckCount})
+            {t("flash.view_decks")} ({deckCount})
           </button>
         )}
       </div>

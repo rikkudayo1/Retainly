@@ -1,20 +1,21 @@
 "use client";
 
 import { useTheme, ALL_THEMES } from "@/context/ThemeContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Sun, Moon, Lock } from "lucide-react";
 import { useState } from "react";
 
 const ThemeToggle = () => {
-  const { colorTheme, mode, unlockedThemes, setColorTheme, toggleMode } = useTheme();
+  const { colorTheme, mode, unlockedThemes, setColorTheme, toggleMode } =
+    useTheme();
+  const { lang, setLang, t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
-
       {/* Panel */}
       {open && (
         <div className="bg-background/90 backdrop-blur-md border border-border rounded-2xl p-4 shadow-2xl space-y-4 w-52">
-
           {/* Color themes */}
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
@@ -33,8 +34,8 @@ const ThemeToggle = () => {
                       !isUnlocked
                         ? "opacity-40 cursor-not-allowed"
                         : isActive
-                        ? "bg-muted font-semibold"
-                        : "hover:bg-muted/50 text-muted-foreground"
+                          ? "bg-muted font-semibold"
+                          : "hover:bg-muted/50 text-muted-foreground"
                     }`}
                   >
                     {/* Color dot */}
@@ -83,6 +84,38 @@ const ThemeToggle = () => {
                 </>
               )}
             </button>
+          </div>
+
+          <div className="h-px bg-border" />
+
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
+              {t("theme.language")}
+            </p>
+            <div className="flex gap-2">
+              {(["en", "th"] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all"
+                  style={
+                    lang === l
+                      ? {
+                          background: "var(--theme-gradient)",
+                          color: "#fff",
+                          textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                        }
+                      : {
+                          backgroundColor: `rgb(var(--theme-glow) / 0.06)`,
+                          color: "var(--muted-foreground)",
+                          border: `1px solid rgb(var(--theme-glow) / 0.15)`,
+                        }
+                  }
+                >
+                  {l === "en" ? "🇬🇧 EN" : "🇹🇭 TH"}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Gacha hint */}

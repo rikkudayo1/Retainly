@@ -1,30 +1,26 @@
-import { useEffect, useState } from "react";
+"use client";
 
-const GEMS_KEY = "retainly_gems";
+import { useEffect, useState } from "react";
+import { getProfile, addGemsDB, spendGemsDB } from "@/lib/db";
 
 export const useGems = () => {
   const [gems, setGems] = useState(0);
 
   useEffect(() => {
-    const saved = localStorage.getItem(GEMS_KEY);
-    if (saved) setGems(parseInt(saved));
+    getProfile().then((profile) => {
+      if (profile) setGems(profile.gems);
+    });
   }, []);
 
-  const addGems = (amount: number) => {
-    setGems((prev) => {
-      const next = prev + amount;
-      localStorage.setItem(GEMS_KEY, String(next));
-      return next;
-    });
+  const addGems = async (amount: number) => {
+    await addGemsDB(amount);
+    setGems((prev) => prev + amount);
   };
 
-  const spendGems = (amount: number): boolean => {
-    const current = parseInt(localStorage.getItem(GEMS_KEY) || "0");
-    if (current < amount) return false;
-    const next = current - amount;
-    localStorage.setItem(GEMS_KEY, String(next));
-    setGems(next);
-    return true;
+  const spendGems = async (amount: number): Promise<boolean> => {
+    const success = await spendGemsDB(amount);
+    if (success) setGems((prev) => prev - amount);
+    return success;
   };
 
   return { gems, addGems, spendGems };

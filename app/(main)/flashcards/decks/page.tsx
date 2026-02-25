@@ -3,44 +3,45 @@
 import { useEffect, useState } from "react";
 import { Trash2, Plus, LayersIcon, BookOpen, Calendar } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
 
-interface FlashcardDeck {
-  id: string;
-  title: string;
-  createdAt: string;
-  cards: { id: string; keyword: string; hint: string; explanation: string }[];
-}
-
-const STORAGE_KEY = "retainly_flashcard_decks";
+import { getDecks, deleteDeck, DBDeck } from "@/lib/db";
 
 const DecksPage = () => {
   const router = useRouter();
-  const [decks, setDecks] = useState<FlashcardDeck[]>([]);
+  const { t } = useLanguage();
+  const [decks, setDecks] = useState<DBDeck[]>([]);
+  const [loadingDecks, setLoadingDecks] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setDecks(JSON.parse(saved));
+    getDecks().then((data) => {
+      setDecks(data);
+      setLoadingDecks(false);
+    });
   }, []);
 
-  const handleDelete = (id: string) => {
-    const updated = decks.filter((d) => d.id !== id);
-    setDecks(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  const handleDelete = async (id: string) => {
+    await deleteDeck(id);
+    setDecks((prev) => prev.filter((d) => d.id !== id));
   };
+
+  const totalCards = decks.reduce((a, d) => a + (d.cards?.length ?? 0), 0);
 
   return (
     <div className="min-h-screen bg-background text-foreground px-6 pt-20 pb-16 max-w-3xl mx-auto">
-
       {/* Header */}
       <div className="flex items-center justify-between mb-10">
         <div>
-          <h1 className="text-4xl font-black mb-1">Saved Decks</h1>
+          <h1 className="text-4xl font-black mb-1">{t("decks.title")}</h1>
           <p className="text-muted-foreground text-sm">
             {decks.length > 0
-              ? `${decks.length} deck${decks.length !== 1 ? "s" : ""} · ${decks.reduce((a, d) => a + d.cards.length, 0)} total cards`
-              : "No decks yet"}
+              ? `${decks.length} ${t("nav.decks")} · ${totalCards} ${t("decks.total")}`
+              : t("decks.empty")}
           </p>
-          <div className="mt-3 h-px w-12" style={{ background: "var(--theme-gradient)" }} />
+          <div
+            className="mt-3 h-px w-12"
+            style={{ background: "var(--theme-gradient)" }}
+          />
         </div>
         <button
           onClick={() => router.push("/flashcards")}
@@ -53,22 +54,49 @@ const DecksPage = () => {
           }}
         >
           <Plus className="w-4 h-4" />
-          New Deck
+          {t("decks.new")}
         </button>
       </div>
 
       {/* Empty state */}
-      {decks.length === 0 ? (
+      {loadingDecks ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border p-5 animate-pulse"
+              style={{
+                borderColor: `rgb(var(--theme-glow) / 0.1)`,
+                backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
+              }}
+            >
+              <div className="flex items-center gap-4 pl-10">
+                <div
+                  className="h-4 rounded-full w-1/3"
+                  style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : decks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-5 text-center">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center"
             style={{ background: `rgb(var(--theme-glow) / 0.1)` }}
           >
-            <LayersIcon className="w-8 h-8" style={{ color: "var(--theme-primary)" }} />
+            <LayersIcon
+              className="w-8 h-8"
+              style={{ color: "var(--theme-primary)" }}
+            />
           </div>
           <div>
-            <p className="font-semibold text-foreground mb-1">No decks saved yet</p>
-            <p className="text-sm text-muted-foreground">Generate flashcards to create your first deck.</p>
+            <p className="font-semibold text-foreground mb-1">
+              {t("decks.empty")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("decks.empty_sub")}
+            </p>
           </div>
           <button
             onClick={() => router.push("/flashcards")}
@@ -79,7 +107,7 @@ const DecksPage = () => {
               textShadow: "0 1px 3px rgba(0,0,0,0.3)",
             }}
           >
-            Create a Deck
+            {t("decks.create")}
           </button>
         </div>
       ) : (
@@ -93,12 +121,16 @@ const DecksPage = () => {
                 backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = `rgb(var(--theme-glow) / 0.35)`;
-                (e.currentTarget as HTMLDivElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.07)`;
+                (e.currentTarget as HTMLDivElement).style.borderColor =
+                  `rgb(var(--theme-glow) / 0.35)`;
+                (e.currentTarget as HTMLDivElement).style.backgroundColor =
+                  `rgb(var(--theme-glow) / 0.07)`;
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = `rgb(var(--theme-glow) / 0.15)`;
-                (e.currentTarget as HTMLDivElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.03)`;
+                (e.currentTarget as HTMLDivElement).style.borderColor =
+                  `rgb(var(--theme-glow) / 0.15)`;
+                (e.currentTarget as HTMLDivElement).style.backgroundColor =
+                  `rgb(var(--theme-glow) / 0.03)`;
               }}
             >
               {/* Deck number accent */}
@@ -118,19 +150,17 @@ const DecksPage = () => {
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <BookOpen className="w-3 h-3" />
-                      {deck.cards.length} card{deck.cards.length !== 1 ? "s" : ""}
+                      {deck.cards?.length ?? 0} {t("decks.cards")}
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {new Date(deck.createdAt).toLocaleDateString("en-US", {
-                        month: "short", day: "numeric", year: "numeric",
-                      })}
+                      {new Date(deck.created_at).toLocaleDateString()}
                     </span>
                   </div>
 
                   {/* Card preview pills */}
                   <div className="flex gap-1.5 flex-wrap mt-1">
-                    {deck.cards.slice(0, 4).map((card) => (
+                    {deck.cards?.slice(0, 4).map((card) => (
                       <span
                         key={card.id}
                         className="text-[10px] px-2 py-0.5 rounded-full border"
@@ -143,9 +173,9 @@ const DecksPage = () => {
                         {card.keyword}
                       </span>
                     ))}
-                    {deck.cards.length > 4 && (
+                    {(deck.cards?.length ?? 0) > 4 && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full text-muted-foreground">
-                        +{deck.cards.length - 4} more
+                        +{(deck.cards?.length ?? 0) - 4} more
                       </span>
                     )}
                   </div>
@@ -154,7 +184,9 @@ const DecksPage = () => {
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => router.push(`/flashcards/study?id=${deck.id}`)}
+                    onClick={() =>
+                      router.push(`/flashcards/study?id=${deck.id}`)
+                    }
                     className="px-4 py-2 rounded-xl text-xs font-semibold hover:brightness-110 transition-all"
                     style={{
                       background: "var(--theme-gradient)",
@@ -162,11 +194,11 @@ const DecksPage = () => {
                       textShadow: "0 1px 3px rgba(0,0,0,0.3)",
                     }}
                   >
-                    Study
+                    {t("decks.study")}
                   </button>
                   <button
                     onClick={() => handleDelete(deck.id)}
-                    className="p-2 rounded-xl transition-all opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-red-500"
+                    className="p-2 rounded-xl transition-all opacity-100 group-hover:opacity-100 hover:bg-red-500/10 text-red-500"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
