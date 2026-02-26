@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Trash2, Plus, LayersIcon, BookOpen, Calendar } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
@@ -23,6 +24,15 @@ const DecksPage = () => {
   const handleDelete = async (id: string) => {
     await deleteDeck(id);
     setDecks((prev) => prev.filter((d) => d.id !== id));
+
+    // ADD: remove from added cache if this was an added public deck
+    try {
+      const saved = sessionStorage.getItem("retainly_added_decks");
+      if (saved) {
+        // We don't have the public_deck_id here so just clear the whole cache
+        sessionStorage.removeItem("retainly_added_decks");
+      }
+    } catch {}
   };
 
   const totalCards = decks.reduce((a, d) => a + (d.cards?.length ?? 0), 0);
@@ -146,7 +156,41 @@ const DecksPage = () => {
 
               <div className="flex items-center justify-between pl-10">
                 <div className="space-y-2 flex-1 min-w-0 mr-4">
+                  <div className="flex flex-col gap-2 mb-2">
                   <p className="font-bold text-base truncate">{deck.title}</p>
+                  {deck.source_public_deck_id &&
+                    deck.source_creator_username && (
+                      <Link
+                        href={`/profile/${deck.source_creator_username}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full border w-fit transition-all hover:brightness-110"
+                        style={{
+                          borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                          color: "var(--theme-badge-text)",
+                          backgroundColor: `rgb(var(--theme-glow) / 0.06)`,
+                        }}
+                      >
+                        <div
+                          className="w-3.5 h-3.5 rounded-full overflow-hidden flex items-center justify-center text-[8px] font-black shrink-0"
+                          style={{
+                            backgroundColor: `rgb(var(--theme-glow) / 0.15)`,
+                            color: "var(--theme-primary)",
+                          }}
+                        >
+                          {deck.source_creator_avatar ? (
+                            <img
+                              src={deck.source_creator_avatar}
+                              alt={deck.source_creator_username}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            deck.source_creator_username[0].toUpperCase()
+                          )}
+                        </div>
+                        {deck.source_creator_username}
+                      </Link>
+                    )}
+                  </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <BookOpen className="w-3 h-3" />

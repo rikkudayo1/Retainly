@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ArrowRight, ChevronRight, PlusCircle, Sheet, LayersIcon } from "lucide-react";
+import { ArrowRight, ChevronRight, PlusCircle, Sheet, LayersIcon, EarthIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
 
 const hoverStyle = (e: React.MouseEvent<HTMLElement>, enter: boolean) => {
@@ -17,7 +17,9 @@ const hoverStyle = (e: React.MouseEvent<HTMLElement>, enter: boolean) => {
 
 const items = [
   { href: "/flashcards", icon: <PlusCircle size={16} />, label: "Create" },
-  { href: "/flashcards/decks", icon: <Sheet size={16} />, label: "Decks" },
+  { href: "/flashcards/decks", icon: <Sheet size={16} />, label: "Your Decks" },
+  { href: "/flashcards/browse", icon: <SearchIcon size={16} />, label: "Public Decks" },
+  { href: "/flashcards/publish", icon: <EarthIcon size={16} />, label: "Publish" },
 ];
 
 const Generate = () => {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Settings, Check } from "lucide-react";
 import { getProfile, updateProfileSettings } from "@/lib/db";
 import AvatarUpload from "@/components/AvatarUpload";
+import { useLanguage } from "@/context/LanguageContext";
 
 const SettingsPage = () => {
   const [username, setUsername] = useState("");
@@ -16,6 +17,7 @@ const SettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useLanguage();
 
   useEffect(() => {
     getProfile().then((profile) => {
@@ -75,9 +77,9 @@ const SettingsPage = () => {
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-1">
           <Settings className="w-6 h-6" style={{ color: "var(--theme-primary)" }} />
-          <h1 className="text-4xl font-black">Settings</h1>
+          <h1 className="text-4xl font-black">{t("settings.title")}</h1>
         </div>
-        <p className="text-muted-foreground text-sm">Manage your profile and preferences.</p>
+        <p className="text-muted-foreground text-sm mt-3">{t("settings.desc")}</p>
         <div className="mt-4 h-px w-16" style={{ background: "var(--theme-gradient)" }} />
       </div>
 
@@ -102,7 +104,7 @@ const SettingsPage = () => {
             size={80}
           />
           <div>
-            <p className="text-sm font-semibold text-foreground">Profile Picture</p>
+            <p className="text-sm font-semibold text-foreground">{t("settings.avatar")}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Click to upload · PNG, JPG, WebP · Max 2MB
             </p>
@@ -112,7 +114,7 @@ const SettingsPage = () => {
         {/* Username */}
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-widest text-muted-foreground/60">
-            Username
+            {t("settings.username")}
           </label>
           <div className="relative mt-3">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm"
@@ -126,7 +128,7 @@ const SettingsPage = () => {
                 borderColor: error ? "#ef4444" : `rgb(var(--theme-glow) / 0.2)`,
                 color: "var(--foreground)",
               }}
-              placeholder="yourname"
+              placeholder={t("settings.username_ph")}
               value={username}
               onChange={(e) => { setUsername(e.target.value); setError(""); }}
               maxLength={20}
@@ -144,7 +146,7 @@ const SettingsPage = () => {
         {/* Bio */}
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-widest text-muted-foreground/60">
-            Bio
+            {t("settings.bio")}
           </label>
           <textarea
             className="mt-3 w-full rounded-xl px-4 py-3 text-sm outline-none resize-none border transition-all"
@@ -154,7 +156,7 @@ const SettingsPage = () => {
               color: "var(--foreground)",
               minHeight: 100,
             }}
-            placeholder="Tell people a little about yourself..."
+            placeholder={t("settings.bio_ph")}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             maxLength={160}
@@ -180,9 +182,9 @@ const SettingsPage = () => {
         >
           {saved ? (
             <span className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4" /> Saved!
+              <Check className="w-4 h-4" /> {t("settings.saved")}
             </span>
-          ) : saving ? "Saving..." : "Save Changes"}
+          ) : saving ? t("settings.saving") : t("settings.save")}
         </button>
       </div>
 

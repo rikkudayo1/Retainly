@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase";
 
 const AppSidebarFooter = () => {
   const { gems } = useGems();
-  const { streak } = useStreak();
+  const { streak, checked } = useStreak();
   const router = useRouter();
   const handleLogout = async () => {
     const supabase = createClient();
@@ -42,7 +42,12 @@ const AppSidebarFooter = () => {
             <span className="text-[10px] text-muted-foreground">Gacha →</span>
           </button>
 
-          {streak > 0 && (
+          {!checked ? (
+            <div
+              className="h-9 rounded-xl animate-pulse"
+              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }}
+            />
+          ) : streak > 0 ? (
             <div
               className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-muted-foreground"
               style={{ backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}
@@ -55,7 +60,7 @@ const AppSidebarFooter = () => {
               </span>
               <span className="text-muted-foreground/50">streak</span>
             </div>
-          )}
+          ) : null}
 
           <button
             onClick={handleLogout}

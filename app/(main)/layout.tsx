@@ -37,7 +37,7 @@ export default function RootLayout({
               <AppPopupProvider />
               <AppSideBar />
               <main className="flex-1 w-full">
-                <SidebarTrigger className="bg-accent m-2 p-5 fixed z-50" />
+                <SidebarTrigger className="fixed left-2 top-4 z-40 h-7 w-7 rounded-lg border shadow-sm bg-background hover:bg-muted transition-colors" />
                 {children}
               </main>
             </SidebarProvider>

@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ArrowRight, ChevronRight, Text, CircleHelp, UploadCloud, BookOpen } from "lucide-react";
+import { MessageCircle, ArrowRight, ChevronRight, Text, CircleHelp, UploadCloud, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 const hoverStyle = (e: React.MouseEvent<HTMLElement>, enter: boolean) => {
@@ -17,6 +17,7 @@ const hoverStyle = (e: React.MouseEvent<HTMLElement>, enter: boolean) => {
 
 const items = [
   { href: "/upload", icon: <UploadCloud size={16} />, label: "Upload" },
+  { href: "/chat", icon: <MessageCircle size={16} />, label: "Study Assistant" },
   { href: "/summary", icon: <Text size={16} />, label: "Summary" },
   { href: "/quizzes", icon: <CircleHelp size={16} />, label: "Quizzes" },
 ];

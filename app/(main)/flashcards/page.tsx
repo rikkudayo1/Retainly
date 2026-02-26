@@ -36,7 +36,8 @@ const FlashcardsPage = () => {
 
   useEffect(() => {
     const handleClickOutside = () => setFileDropdownOpen(false);
-    if (fileDropdownOpen) document.addEventListener("click", handleClickOutside);
+    if (fileDropdownOpen)
+      document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [fileDropdownOpen]);
 
@@ -54,7 +55,10 @@ const FlashcardsPage = () => {
       const formData = new FormData();
       formData.append("text", inputText);
 
-      const res = await fetch("/api/generate", { method: "POST", body: formData });
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -86,12 +90,16 @@ const FlashcardsPage = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6 bg-background text-foreground">
       <div className="w-full max-w-xl space-y-6">
-
         {/* Header */}
         <div className="text-center space-y-3">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto"
-            style={{ background: `rgb(var(--theme-glow) / 0.1)` }}>
-            <LayoutGrid className="w-7 h-7" style={{ color: "var(--theme-primary)" }} />
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto"
+            style={{ background: `rgb(var(--theme-glow) / 0.1)` }}
+          >
+            <LayoutGrid
+              className="w-7 h-7"
+              style={{ color: "var(--theme-primary)" }}
+            />
           </div>
           <h1 className="text-3xl font-black">{t("flash.title")}</h1>
           <p className="text-muted-foreground text-sm">{t("flash.subtitle")}</p>
@@ -112,16 +120,24 @@ const FlashcardsPage = () => {
             placeholder={t("flash.deck_ph")}
             value={deckTitle}
             onChange={(e) => setDeckTitle(e.target.value)}
-            onFocus={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = "var(--theme-primary)"; }}
-            onBlur={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = `rgb(var(--theme-glow) / 0.2)`; }}
+            onFocus={(e) => {
+              (e.currentTarget as HTMLInputElement).style.borderColor =
+                "var(--theme-primary)";
+            }}
+            onBlur={(e) => {
+              (e.currentTarget as HTMLInputElement).style.borderColor =
+                `rgb(var(--theme-glow) / 0.2)`;
+            }}
           />
         </div>
 
         {/* File dropdown — skeleton while loading */}
         {loadingFiles ? (
-          <div className="h-12 rounded-xl animate-pulse"
-            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }} />
-        ) : storedFiles.length > 0 && (
+          <div
+            className="h-12 rounded-xl animate-pulse"
+            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }}
+          />
+        ) : (
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-widest text-muted-foreground/60">
               {t("flash.library")}
@@ -132,41 +148,85 @@ const FlashcardsPage = () => {
                 className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-sm border transition-all"
                 style={{
                   backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-                  borderColor: fileDropdownOpen ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.2)`,
-                  color: selectedFile ? "var(--foreground)" : "var(--muted-foreground)",
+                  borderColor: fileDropdownOpen
+                    ? "var(--theme-primary)"
+                    : `rgb(var(--theme-glow) / 0.2)`,
+                  color: selectedFile
+                    ? "var(--foreground)"
+                    : "var(--muted-foreground)",
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 shrink-0" style={{ color: "var(--theme-primary)" }} />
+                  <FileText
+                    className="w-4 h-4 shrink-0"
+                    style={{ color: "var(--theme-primary)" }}
+                  />
                   {selectedFile ? selectedFile.name : t("quiz.choose")}
                 </div>
-                <ChevronDown className="w-4 h-4 transition-transform duration-200"
-                  style={{ transform: fileDropdownOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
+                <ChevronDown
+                  className="w-4 h-4 transition-transform duration-200"
+                  style={{
+                    transform: fileDropdownOpen
+                      ? "rotate(180deg)"
+                      : "rotate(0deg)",
+                  }}
+                />
               </button>
 
               {fileDropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 rounded-xl border shadow-xl overflow-hidden"
-                  style={{ backgroundColor: "var(--background)", borderColor: `rgb(var(--theme-glow) / 0.2)` }}>
-                  {storedFiles.map((f) => (
-                    <button key={f.id}
-                      onClick={() => { setSelectedFile(f); setPastedText(""); setFileDropdownOpen(false); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left text-muted-foreground transition-all"
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
-                        (e.currentTarget as HTMLButtonElement).style.color = `var(--theme-badge-text)`;
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                        (e.currentTarget as HTMLButtonElement).style.color = "";
-                      }}
-                    >
-                      <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
-                      {f.name}
-                      {selectedFile?.id === f.id && (
-                        <span className="ml-auto text-xs" style={{ color: "var(--theme-primary)" }}>✓</span>
-                      )}
-                    </button>
-                  ))}
+                <div
+                  className="absolute z-50 w-full mt-1 rounded-xl border shadow-xl overflow-hidden"
+                  style={{
+                    backgroundColor: "var(--background)",
+                    borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                  }}
+                >
+                  {storedFiles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground px-4 py-3">
+                      No files uploaded yet.
+                    </p>
+                  ) : (
+                    storedFiles.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => {
+                          setSelectedFile(f);
+                          setPastedText("");
+                          setFileDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left text-muted-foreground transition-all"
+                        onMouseEnter={(e) => {
+                          (
+                            e.currentTarget as HTMLButtonElement
+                          ).style.backgroundColor =
+                            `rgb(var(--theme-glow) / 0.08)`;
+                          (e.currentTarget as HTMLButtonElement).style.color =
+                            `var(--theme-badge-text)`;
+                        }}
+                        onMouseLeave={(e) => {
+                          (
+                            e.currentTarget as HTMLButtonElement
+                          ).style.backgroundColor = "transparent";
+                          (e.currentTarget as HTMLButtonElement).style.color =
+                            "";
+                        }}
+                      >
+                        <FileText
+                          className="w-3.5 h-3.5 shrink-0"
+                          style={{ color: "var(--theme-primary)" }}
+                        />
+                        {f.name}
+                        {selectedFile?.id === f.id && (
+                          <span
+                            className="ml-auto text-xs"
+                            style={{ color: "var(--theme-primary)" }}
+                          >
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -175,9 +235,15 @@ const FlashcardsPage = () => {
 
         {/* Divider */}
         <div className="flex items-center gap-3">
-          <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
+          <div
+            className="flex-1 h-px"
+            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }}
+          />
           <span className="text-xs text-muted-foreground">or</span>
-          <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
+          <div
+            className="flex-1 h-px"
+            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }}
+          />
         </div>
 
         {/* Text input */}
@@ -193,9 +259,18 @@ const FlashcardsPage = () => {
             }}
             placeholder={t("flash.placeholder")}
             value={pastedText}
-            onChange={(e) => { setPastedText(e.target.value); if (e.target.value) setSelectedFile(null); }}
-            onFocus={(e) => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--theme-primary)"; }}
-            onBlur={(e) => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = `rgb(var(--theme-glow) / 0.2)`; }}
+            onChange={(e) => {
+              setPastedText(e.target.value);
+              if (e.target.value) setSelectedFile(null);
+            }}
+            onFocus={(e) => {
+              (e.currentTarget as HTMLTextAreaElement).style.borderColor =
+                "var(--theme-primary)";
+            }}
+            onBlur={(e) => {
+              (e.currentTarget as HTMLTextAreaElement).style.borderColor =
+                `rgb(var(--theme-glow) / 0.2)`;
+            }}
           />
         </div>
 
@@ -218,17 +293,25 @@ const FlashcardsPage = () => {
             className="w-full text-sm flex items-center justify-center gap-2 py-2 rounded-xl border transition-all text-muted-foreground"
             style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.06)`;
-              (e.currentTarget as HTMLButtonElement).style.color = `var(--theme-badge-text)`;
-              (e.currentTarget as HTMLButtonElement).style.borderColor = `rgb(var(--theme-glow) / 0.3)`;
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                `rgb(var(--theme-glow) / 0.06)`;
+              (e.currentTarget as HTMLButtonElement).style.color =
+                `var(--theme-badge-text)`;
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                `rgb(var(--theme-glow) / 0.3)`;
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                "transparent";
               (e.currentTarget as HTMLButtonElement).style.color = "";
-              (e.currentTarget as HTMLButtonElement).style.borderColor = `rgb(var(--theme-glow) / 0.15)`;
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                `rgb(var(--theme-glow) / 0.15)`;
             }}
           >
-            <LayersIcon className="w-4 h-4" style={{ color: "var(--theme-primary)" }} />
+            <LayersIcon
+              className="w-4 h-4"
+              style={{ color: "var(--theme-primary)" }}
+            />
             {t("flash.view_decks")} ({deckCount})
           </button>
         )}
