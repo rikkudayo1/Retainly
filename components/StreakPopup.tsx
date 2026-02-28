@@ -7,8 +7,7 @@ interface StreakPopupProps {
   onDismiss: () => void;
 }
 
-const StreakPopup = async ({ streak, onDismiss }: StreakPopupProps) => {
-  await logActivity();
+const StreakPopup = ({ streak, onDismiss }: StreakPopupProps) => {
   return (
     <div
       className="fixed inset-0 z-[999] flex items-center justify-center cursor-pointer"
