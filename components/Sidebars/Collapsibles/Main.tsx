@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { MessageCircle, ArrowRight, ChevronRight, Text, CircleHelp, UploadCloud, BookOpen } from "lucide-react";
+import { MessageCircle, ArrowRight, ChevronRight, Text, CircleHelp, UploadCloud, BookOpen, ChartBar } from "lucide-react";
 import Link from "next/link";
 
 const hoverStyle = (e: React.MouseEvent<HTMLElement>, enter: boolean) => {
@@ -20,6 +20,7 @@ const items = [
   { href: "/chat", icon: <MessageCircle size={16} />, label: "Study Assistant" },
   { href: "/summary", icon: <Text size={16} />, label: "Summary" },
   { href: "/quizzes", icon: <CircleHelp size={16} />, label: "Quizzes" },
+  { href: "/leaderboard", icon: <ChartBar size={16} />, label: "Leaderboard" },
 ];
 
 const Main = () => {

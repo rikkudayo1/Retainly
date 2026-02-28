@@ -32,8 +32,10 @@ export const translations = {
     "home.feat.summary.desc":  "Paste any text or upload a file and get a sharp, concise summary in seconds.",
     "home.feat.quiz.title":    "Smart Quizzes",
     "home.feat.quiz.desc":     "Auto-generated multiple choice quizzes with instant feedback and score tracking.",
+    "home.feat.aichat.title":  "AI Chat Bot",
+    "home.feat.aichat.desc":   "Your AI assistant for asking or planning your study",
     "home.feat.flash.title":   "Flashcard Decks",
-    "home.feat.flash.desc":    "Anki-style flashcards with hint system and Got it / Unsure / Missed tracking.",
+    "home.feat.flash.desc":    "Quickly generate flashcard using AI from text or files that you uploaded",
     "home.feat.library.title": "File Library",
     "home.feat.library.desc":  "Upload your PDFs and text files once, use them across all study tools.",
 
@@ -228,7 +230,7 @@ export const translations = {
     "theme.gems_hint":"💎 Earn gems to unlock more themes",
 
     // ── Profile ──────────────────────────────────
-    "profile.streak":       "Day Streak",
+    "profile.streak":       "Login Streak",
     "profile.gems":         "Gems",
     "profile.published":    "Published",
     "profile.decks":        "Published Decks",
@@ -283,8 +285,10 @@ export const translations = {
     "home.feat.summary.desc":  "วางข้อความหรืออัปโหลดไฟล์แล้วรับสรุปที่กระชับในไม่กี่วินาที",
     "home.feat.quiz.title":    "แบบทดสอบอัจฉริยะ",
     "home.feat.quiz.desc":     "แบบทดสอบปรนัยที่สร้างอัตโนมัติพร้อมผลตอบรับทันทีและติดตามคะแนน",
-    "home.feat.flash.title":   "สำรับแฟลชการ์ด",
-    "home.feat.flash.desc":    "แฟลชการ์ดแบบ Anki พร้อมระบบคำใบ้และติดตาม จำได้ / ไม่แน่ใจ / พลาด",
+    "home.feat.aichat.title":  "AI Chat Bot",
+    "home.feat.aichat.desc":   "แชทบอท AI สำหรับถามตอบในสิ่งที่ไม่เข้าใจ หรือ ช่วยวางแผนการเรียนสำหรับคุณ",
+    "home.feat.flash.title":   "สร้างแฟลชการ์ดด้วย AI",
+    "home.feat.flash.desc":    "สร้างแฟลชการ์ดขึ้นด้วย AI จากข้อความหรือเอกสารที่คุณอัพโหลด",
     "home.feat.library.title": "คลังไฟล์",
     "home.feat.library.desc":  "อัปโหลด PDF และไฟล์ข้อความครั้งเดียว ใช้ได้กับทุกเครื่องมือการเรียน",
 

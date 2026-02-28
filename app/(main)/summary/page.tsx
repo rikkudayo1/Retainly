@@ -16,6 +16,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import { getFiles, DBFile } from "@/lib/db";
 import MarkdownContent from "@/components/MarkdownContent";
+import ImageAttachment, { ImageState } from "@/components/ImageAttachment";
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface KeyConcept {
@@ -48,6 +49,7 @@ const SummaryPage = () => {
   const [showFileMenu, setShowFileMenu] = React.useState(false);
   const [storedFiles, setStoredFiles] = React.useState<DBFile[]>([]);
   const [loadingFiles, setLoadingFiles] = React.useState(true);
+  const [image, setImage] = React.useState<ImageState>(null);
 
   // Output state
   const [output, setOutput] = React.useState<SummaryOutput | null>(null);
@@ -78,7 +80,8 @@ const SummaryPage = () => {
 
   const canGenerate =
     !loading &&
-    (inputMode === "file" ? !!selectedFile : pastedText.trim().length > 20);
+    (image !== null ||
+      (inputMode === "file" ? !!selectedFile : pastedText.trim().length > 20));
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
@@ -88,9 +91,14 @@ const SummaryPage = () => {
 
     try {
       const formData = new FormData();
-      const text =
-        inputMode === "file" ? selectedFile!.text : pastedText.trim();
-      formData.append("text", text);
+
+      if (image) {
+        formData.append("imageBase64", image.base64);
+        formData.append("imageMimeType", image.mimeType);
+      } else {
+        const text = inputMode === "file" ? selectedFile!.text : pastedText.trim();
+        formData.append("text", text);
+      }
 
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -120,6 +128,7 @@ const SummaryPage = () => {
     setError(null);
     setPastedText("");
     setSelectedFile(null);
+    setImage(null);
   };
 
   return (
@@ -142,7 +151,7 @@ const SummaryPage = () => {
           </p>
           <div
             className="h-px w-12 mt-3"
-            style={{ background: "var(--theme-gradient)" }}
+            style={{ background: "var(--theme-primary)" }}
           />
         </div>
 
@@ -371,13 +380,21 @@ const SummaryPage = () => {
               </div>
             )}
 
+            {/* ── Image attachment ── */}
+            <ImageAttachment
+              selectedImage={image}
+              onImageSelect={(base64, mimeType, name) => setImage({ base64, mimeType, name })}
+              onImageClear={() => setImage(null)}
+              disabled={loading}
+            />
+
             {/* ── Generate button ── */}
             <button
               onClick={handleGenerate}
               disabled={!canGenerate}
               className="w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40"
               style={{
-                background: canGenerate ? "var(--theme-gradient)" : `rgb(var(--theme-glow) / 0.1)`,
+                background: canGenerate ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.1)`,
                 color: canGenerate ? "#fff" : "var(--muted-foreground)",
               }}
             >
@@ -449,7 +466,7 @@ const SummaryPage = () => {
               <div className="flex items-center gap-2">
                 <div
                   className="w-1.5 h-5 rounded-full"
-                  style={{ background: "var(--theme-gradient)" }}
+                  style={{ background: "var(--theme-primary)" }}
                 />
                 <h2 className="text-base font-black">Results</h2>
                 {(inputMode === "file" ? selectedFile?.name : null) && (

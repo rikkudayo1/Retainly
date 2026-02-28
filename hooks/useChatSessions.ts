@@ -16,6 +16,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   attachedFileName?: string;
+  attachedImageName?: string; 
 }
 
 export interface UseChatSessionsReturn {
@@ -39,6 +40,7 @@ export interface UseChatSessionsReturn {
     userContent: string,
     assistantContent: string,
     attachedFileName?: string | null,
+    attachedImageName?: string | null,
   ) => Promise<void>;
 
   // Optimistically append the streaming assistant message
@@ -76,6 +78,7 @@ export function useChatSessions(): UseChatSessionsReturn {
         role: m.role,
         content: m.content,
         attachedFileName: m.attached_file_name ?? undefined,
+        attachedImageName: m.attached_image_name ?? undefined,
       })),
     );
     setLoadingMessages(false);
@@ -146,9 +149,9 @@ export function useChatSessions(): UseChatSessionsReturn {
     userContent: string,
     assistantContent: string,
     attachedFileName?: string | null,
+  attachedImageName?: string | null,
   ) => {
-    if (!activeSessionId) return;
-    await saveChatMessage(activeSessionId, "user", userContent, attachedFileName);
+    if (!activeSessionId) return;await saveChatMessage(activeSessionId, "user", userContent, attachedFileName, attachedImageName);
     await saveChatMessage(activeSessionId, "assistant", assistantContent);
 
     // Bump session to top of list

@@ -14,15 +14,15 @@ const AppSideBarHeader = () => {
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black"
                 style={{
-                  background: "var(--theme-gradient)",
+                  background: "var(--theme-primary)",
                   color: "var(--theme-button-text)",
                 }}
               >
                 R
               </div>
               <h1
-                className="font-black text-xl bg-clip-text text-transparent"
-                style={{ backgroundImage: "var(--theme-gradient)" }}
+                className="font-black text-xl"
+                style={{ color: "var(--theme-primary)" }}
               >
                 Retainly
               </h1>

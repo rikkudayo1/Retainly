@@ -50,14 +50,14 @@ const DecksPage = () => {
           </p>
           <div
             className="mt-3 h-px w-12"
-            style={{ background: "var(--theme-gradient)" }}
+            style={{ background: "var(--theme-primary)" }}
           />
         </div>
         <button
           onClick={() => router.push("/flashcards")}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all hover:brightness-110"
           style={{
-            background: "var(--theme-gradient)",
+            background: "var(--theme-primary)",
             color: "#fff",
             textShadow: "0 1px 3px rgba(0,0,0,0.3)",
             borderColor: "transparent",
@@ -112,7 +112,7 @@ const DecksPage = () => {
             onClick={() => router.push("/flashcards")}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold hover:brightness-110 transition-all"
             style={{
-              background: "var(--theme-gradient)",
+              background: "var(--theme-primary)",
               color: "#fff",
               textShadow: "0 1px 3px rgba(0,0,0,0.3)",
             }}
@@ -233,7 +233,7 @@ const DecksPage = () => {
                     }
                     className="px-4 py-2 rounded-xl text-xs font-semibold hover:brightness-110 transition-all"
                     style={{
-                      background: "var(--theme-gradient)",
+                      background: "var(--theme-primary)",
                       color: "#fff",
                       textShadow: "0 1px 3px rgba(0,0,0,0.3)",
                     }}

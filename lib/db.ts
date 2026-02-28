@@ -30,6 +30,15 @@ export interface DBDeck {
   source_creator_avatar: string | null;
 }
 
+export interface LeaderboardEntry {
+  user_id: string;
+  username: string;
+  avatar_url: string | null;
+  banner_id: string;
+  points: number;
+  total_activity: number;
+}
+
 export interface DBProfileFull {
   id: string;
   username: string | null;
@@ -46,6 +55,7 @@ export interface DBProfileFull {
   last_seen: string | null;
   last_reward: string | null;
   created_at: string | null;
+  style_mode: "default" | "pixel" | null;
 }
 
 export interface PublicDeck {
@@ -77,6 +87,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   attached_file_name?: string | null;
+  attached_image_name?: string | null;
   created_at: string;
 }
 
@@ -555,6 +566,7 @@ export async function saveChatMessage(
   role: "user" | "assistant",
   content: string,
   attachedFileName?: string | null,
+  attachedImageName?: string | null,
 ): Promise<ChatMessage | null> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -564,10 +576,69 @@ export async function saveChatMessage(
       role,
       content,
       attached_file_name: attachedFileName ?? null,
+      attached_image_name: attachedImageName ?? null,
     })
     .select()
     .single();
 
   if (error) return null;
   return data;
+}
+
+/**
+ * Log one activity hit for the current user today.
+ * Call this anywhere an action happens — quiz submit, flashcard flip,
+ * summary generation, etc. It's idempotent per day (just increments count).
+ */
+export async function logActivity(): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.rpc("increment_activity", { p_user_id: user.id });
+}
+
+/**
+ * Fetch a full year of activity for a given user id.
+ * Returns a Record<"YYYY-MM-DD", number> ready to pass into <ActivityHeatmap />.
+ */
+export async function getActivityHeatmap(
+  userId: string
+): Promise<Record<string, number>> {
+  const supabase = createClient();
+
+  const since = new Date();
+  since.setFullYear(since.getFullYear() - 1);
+  const sinceStr = since.toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("activity_log")
+    .select("activity_date, count")
+    .eq("user_id", userId)
+    .gte("activity_date", sinceStr)
+    .order("activity_date", { ascending: true });
+
+  if (error || !data) return {};
+
+  return Object.fromEntries(
+    data.map((row: { activity_date: string; count: number }) => [
+      row.activity_date,
+      row.count,
+    ])
+  );
+}
+
+export async function getLeaderboard(
+  type: "weekly" | "alltime"
+): Promise<LeaderboardEntry[]> {
+  const supabase = createClient();
+  const view =
+    type === "weekly" ? "leaderboard_weekly" : "leaderboard_alltime";
+
+  const { data, error } = await supabase
+    .from(view)
+    .select("user_id, username, avatar_url, banner_id, points, total_activity");
+
+  if (error || !data) return [];
+  return data as LeaderboardEntry[];
 }

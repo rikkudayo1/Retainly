@@ -101,7 +101,7 @@ const ThemeToggle = () => {
                   style={
                     lang === l
                       ? {
-                          background: "var(--theme-gradient)",
+                          background: "var(--theme-primary)",
                           color: "#fff",
                           textShadow: "0 1px 3px rgba(0,0,0,0.3)",
                         }

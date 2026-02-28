@@ -82,7 +82,7 @@ const UploadPage = () => {
       <div className="mb-10">
         <h1 className="text-4xl font-black mb-1">{t("upload.title")}</h1>
         <p className="text-muted-foreground text-sm">{t("upload.subtitle")}</p>
-        <div className="mt-4 h-px w-16" style={{ background: "var(--theme-gradient)" }} />
+        <div className="mt-4 h-px w-16" style={{ background: "var(--theme-primary)" }} />
       </div>
 
       <input ref={inputRef} type="file" accept=".txt,.md,.pdf" className="hidden" onChange={handleFileUpload} />

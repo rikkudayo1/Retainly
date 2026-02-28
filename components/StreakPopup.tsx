@@ -1,11 +1,14 @@
 "use client";
 
+import { logActivity } from "@/lib/db";
+
 interface StreakPopupProps {
   streak: number;
   onDismiss: () => void;
 }
 
-const StreakPopup = ({ streak, onDismiss }: StreakPopupProps) => {
+const StreakPopup = async ({ streak, onDismiss }: StreakPopupProps) => {
+  await logActivity();
   return (
     <div
       className="fixed inset-0 z-[999] flex items-center justify-center cursor-pointer"

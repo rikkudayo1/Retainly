@@ -151,7 +151,7 @@ const PublicDeckCard = ({
       {isOwn ? (
         onUnpublish || onDelete ? (
           <div
-            className="flex gap-2 pt-1 border-t"
+            className="flex gap-2 pt-4 border-t"
             style={{ borderColor: `rgb(var(--theme-glow) / 0.1)` }}
           >
             <button

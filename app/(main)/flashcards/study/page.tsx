@@ -7,7 +7,7 @@ import { useGems } from "@/hooks/useGems";
 import { Suspense } from "react";
 import { CheckCircle, XCircle, Minus, LayersIcon } from "lucide-react";
 
-import { getDeck, DBDeck, DBCard } from "@/lib/db";
+import { getDeck, DBDeck, DBCard, logActivity } from "@/lib/db";
 
 type CardState = "keyword" | "hint" | "answer";
 type CardResult = "got_it" | "unsure" | "missed";
@@ -229,7 +229,7 @@ const StudyContent = () => {
             className="h-full rounded-full transition-all duration-700"
             style={{
               width: `${progress}%`,
-              background: "var(--theme-gradient)",
+              background: "var(--theme-primary)",
             }}
           />
         </div>

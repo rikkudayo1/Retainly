@@ -157,7 +157,7 @@ const QuizPage = () => {
   };
 
   const gradientBtn: React.CSSProperties = {
-    background: "var(--theme-gradient)",
+    background: "var(--theme-primary)",
     color: "#fff",
     textShadow: "0 1px 3px rgba(0,0,0,0.4)",
   };
@@ -374,7 +374,7 @@ const QuizPage = () => {
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${progress}%`,
-                background: "var(--theme-gradient)",
+                background: "var(--theme-primary)",
               }}
             />
           </div>
@@ -486,7 +486,7 @@ const QuizPage = () => {
           />
           <h1
             className="text-6xl font-black bg-clip-text text-transparent"
-            style={{ backgroundImage: "var(--theme-gradient)" }}
+            style={{ backgroundImage: "var(--theme-primary)" }}
           >
             {scorePercent}%
           </h1>

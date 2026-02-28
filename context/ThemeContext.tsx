@@ -15,7 +15,13 @@ export const ALL_THEMES = [
 ] as const;
 
 export type ColorTheme = (typeof ALL_THEMES)[number]["id"];
+export type StyleMode = "default" | "pixel";
 type Mode = "light" | "dark";
+
+export const ALL_STYLES: { id: StyleMode; label: string; description: string; emoji: string }[] = [
+  { id: "default", label: "Default", description: "Clean and minimal", emoji: "✦" },
+  { id: "pixel", label: "Pixel", description: "Retro 8-bit arcade style", emoji: "▶" },
+];
 
 const THEME_VARS: Record<ColorTheme, Record<string, string>> = {
   blue: {
@@ -103,18 +109,22 @@ const THEME_VARS: Record<ColorTheme, Record<string, string>> = {
 interface ThemeContextType {
   colorTheme: ColorTheme;
   mode: Mode;
+  styleMode: StyleMode;
   unlockedThemes: ColorTheme[];
   setColorTheme: (t: ColorTheme) => void;
   toggleMode: () => void;
+  setStyleMode: (s: StyleMode) => void;
   unlockTheme: (t: ColorTheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   colorTheme: "blue",
   mode: "dark",
+  styleMode: "default",
   unlockedThemes: ["blue", "purple", "luxury"],
   setColorTheme: () => {},
   toggleMode: () => {},
+  setStyleMode: () => {},
   unlockTheme: () => {},
 });
 
@@ -123,6 +133,7 @@ export const useTheme = () => useContext(ThemeContext);
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [colorTheme, setColorThemeState] = useState<ColorTheme>("blue");
   const [mode, setMode] = useState<Mode>("dark");
+  const [styleMode, setStyleModeState] = useState<StyleMode>("default");
   const [unlockedThemes, setUnlockedThemes] = useState<ColorTheme[]>([
     "blue",
     "purple",
@@ -135,11 +146,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       if (profile.color_theme)
         setColorThemeState(profile.color_theme as ColorTheme);
       if (profile.mode) setMode(profile.mode as Mode);
+      if (profile.style_mode) setStyleModeState(profile.style_mode as StyleMode);
       if (profile.unlocked_themes)
         setUnlockedThemes(profile.unlocked_themes as ColorTheme[]);
     });
   }, []);
 
+  // Apply color theme + dark mode
   useEffect(() => {
     const root = document.documentElement;
 
@@ -155,6 +168,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, [colorTheme, mode]);
 
+  // Apply style mode as data attribute on <html>
+  useEffect(() => {
+    document.documentElement.setAttribute("data-style", styleMode);
+  }, [styleMode]);
+
   const setColorTheme = (t: ColorTheme) => {
     setColorThemeState(t);
     updateProfile({ color_theme: t });
@@ -164,6 +182,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const next = mode === "dark" ? "light" : "dark";
     setMode(next);
     updateProfile({ mode: next });
+  };
+
+  const setStyleMode = (s: StyleMode) => {
+    setStyleModeState(s);
+    updateProfile({ style_mode: s });
   };
 
   const unlockTheme = (t: ColorTheme) => {
@@ -178,9 +201,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         colorTheme,
         mode,
+        styleMode,
         unlockedThemes,
         setColorTheme,
         toggleMode,
+        setStyleMode,
         unlockTheme,
       }}
     >

@@ -8,11 +8,13 @@ import {
   Sparkles,
   FileText,
   Plus,
+  ImageIcon,
 } from "lucide-react";
 import { getFiles, DBFile } from "@/lib/db";
 import MarkdownContent from "@/components/MarkdownContent";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLanguage } from "@/context/LanguageContext";
+import { ImageState } from "@/components/ImageAttachment";
 
 // ─── New Chat Modal ───────────────────────────────────────────
 
@@ -71,7 +73,7 @@ const NewChatModal = ({
             onClick={submit}
             disabled={!title.trim()}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
-            style={{ background: "var(--theme-gradient)", color: "#fff" }}
+            style={{ background: "var(--theme-primary)", color: "#fff" }}
           >
             {t("chat.start")}
           </button>
@@ -171,7 +173,7 @@ const ChatTab = ({
       )}
 
       <button
-        className="w-4 h-4 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+        className="w-4 h-4 rounded flex items-center justify-center transition-opacity shrink-0"
         style={{ color: "var(--muted-foreground)" }}
         onClick={onClose}
         title={t("chat.cancel")}
@@ -211,23 +213,26 @@ const ChatPage = () => {
   const { t } = useLanguage();
   const [input, setInput] = React.useState("");
   const [selectedFile, setSelectedFile] = React.useState<DBFile | null>(null);
-  const [showFileMenu, setShowFileMenu] = React.useState(false);
+  const [showAttachMenu, setShowAttachMenu] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [storedFiles, setStoredFiles] = React.useState<DBFile[]>([]);
   const [loadingFiles, setLoadingFiles] = React.useState(true);
   const [contextFile, setContextFile] = React.useState<DBFile | null>(null);
   const [showNewChatModal, setShowNewChatModal] = React.useState(false);
+  const [image, setImage] = React.useState<ImageState>(null);
 
   const pendingUserMsgRef = React.useRef<{
     role: "user";
     content: string;
     attachedFileName?: string;
+    attachedImageName?: string;
   } | null>(null);
 
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const fileMenuRef = React.useRef<HTMLDivElement>(null);
+  const attachMenuRef = React.useRef<HTMLDivElement>(null);
   const tabBarRef = React.useRef<HTMLDivElement>(null);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     getFiles().then((data) => { setStoredFiles(data); setLoadingFiles(false); });
@@ -247,12 +252,12 @@ const ChatPage = () => {
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (fileMenuRef.current && !fileMenuRef.current.contains(e.target as Node))
-        setShowFileMenu(false);
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node))
+        setShowAttachMenu(false);
     };
-    if (showFileMenu) document.addEventListener("mousedown", handler);
+    if (showAttachMenu) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showFileMenu]);
+  }, [showAttachMenu]);
 
   const displayMessages = React.useMemo(() => {
     if (!pendingUserMsgRef.current) return messages;
@@ -265,22 +270,38 @@ const ChatPage = () => {
     return msgs;
   }, [messages]);
 
+  const handleImageFile = (file: File) => {
+    const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
+    if (!ACCEPTED.includes(file.type)) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = (e.target?.result as string).split(",")[1];
+      setImage({ base64, mimeType: file.type, name: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSend = async (overrideInput?: string) => {
     const text = (overrideInput ?? input).trim();
-    if (!text && !selectedFile) return;
+    if (!text && !selectedFile && !image) return;
     if (!activeSessionId) { setShowNewChatModal(true); return; }
 
     const attachedFile = selectedFile ?? null;
     if (attachedFile) setContextFile(attachedFile);
 
-    const userContent = text || `Attached file: ${attachedFile?.name}`;
+    const userContent = text
+      || (image ? `Attached image: ${image.name}` : `Attached file: ${attachedFile?.name}`);
+
     const historyForApi = [
       ...messages,
       { role: "user" as const, content: userContent },
     ];
 
+    const imageCopy = image;
     setInput("");
     setSelectedFile(null);
+    setImage(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setLoading(true);
 
@@ -288,6 +309,7 @@ const ChatPage = () => {
       role: "user",
       content: userContent,
       attachedFileName: attachedFile?.name,
+      attachedImageName: imageCopy?.name,
     };
     setStreamingMessage("");
 
@@ -300,6 +322,9 @@ const ChatPage = () => {
         body: JSON.stringify({
           messages: historyForApi.map(({ role, content }) => ({ role, content })),
           fileText: activeFile?.text ?? null,
+          imageBase64: imageCopy?.base64 ?? null,
+          imageMimeType: imageCopy?.mimeType ?? null,
+          imageName: imageCopy?.name ?? null,
         }),
       });
 
@@ -467,7 +492,7 @@ const ChatPage = () => {
               <button
                 onClick={() => setShowNewChatModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
-                style={{ background: "var(--theme-gradient)", color: "#fff" }}
+                style={{ background: "var(--theme-primary)", color: "#fff" }}
               >
                 <Plus className="w-4 h-4" /> {t("chat.new")}
               </button>
@@ -509,6 +534,7 @@ const ChatPage = () => {
                 </div>
               )}
               <div className="flex flex-col gap-1 min-w-0" style={{ maxWidth: "min(42rem, calc(100vw - 5rem))" }}>
+                {/* File attachment badge */}
                 {msg.role === "user" && msg.attachedFileName && (
                   <div className="flex justify-end">
                     <span
@@ -524,11 +550,27 @@ const ChatPage = () => {
                     </span>
                   </div>
                 )}
+                {/* Image attachment badge */}
+                {msg.role === "user" && msg.attachedImageName && (
+                  <div className="flex justify-end">
+                    <span
+                      className="text-xs px-2.5 py-1 rounded-full border flex items-center gap-1.5"
+                      style={{
+                        borderColor: `rgb(var(--theme-glow) / 0.3)`,
+                        backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
+                        color: "var(--theme-badge-text)",
+                      }}
+                    >
+                      <ImageIcon className="w-3 h-3" />
+                      {msg.attachedImageName}
+                    </span>
+                  </div>
+                )}
                 <div
                   className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"}`}
                   style={
                     msg.role === "user"
-                      ? { background: "var(--theme-gradient)", color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.2)" }
+                      ? { backgroundColor: "var(--theme-primary)", color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.2)" }
                       : { backgroundColor: `rgb(var(--theme-glow) / 0.06)`, border: `1px solid rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)" }
                   }
                 >
@@ -566,6 +608,36 @@ const ChatPage = () => {
               backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
             }}
           >
+            {/* Image preview pill */}
+            {image && (
+              <div className="flex items-center gap-2 mb-2.5">
+                <div
+                  className="relative flex items-center gap-2 px-2 py-1.5 rounded-xl border"
+                  style={{
+                    borderColor: `rgb(var(--theme-glow) / 0.25)`,
+                    backgroundColor: `rgb(var(--theme-glow) / 0.05)`,
+                  }}
+                >
+                  <img
+                    src={`data:${image.mimeType};base64,${image.base64}`}
+                    alt={image.name}
+                    className="w-10 h-10 rounded-lg object-cover border shrink-0"
+                    style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}
+                  />
+                  <span className="text-xs truncate max-w-[120px]" style={{ color: "var(--theme-badge-text)" }}>
+                    {image.name}
+                  </span>
+                  <button
+                    onClick={() => setImage(null)}
+                    className="shrink-0 w-5 h-5 rounded-md flex items-center justify-center hover:opacity-70 transition-opacity"
+                    style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)`, color: "var(--muted-foreground)" }}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Selected file pill */}
             {selectedFile && (
               <div className="flex items-center gap-2 mb-2.5">
@@ -586,29 +658,38 @@ const ChatPage = () => {
               </div>
             )}
 
-            {/* File picker dropdown */}
-            {showFileMenu && (
-              <div
-                ref={fileMenuRef}
-                className="mb-3 rounded-xl border shadow-xl p-2 space-y-1 max-h-48 overflow-y-auto"
-                style={{
-                  borderColor: `rgb(var(--theme-glow) / 0.2)`,
-                  backgroundColor: "var(--background)",
-                }}
-              >
-                {loadingFiles ? (
-                  [1, 2].map((i) => (
-                    <div key={i} className="h-8 rounded-lg animate-pulse"
-                      style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }} />
-                  ))
-                ) : storedFiles.length === 0 ? (
-                  <p className="text-sm text-muted-foreground px-3 py-2">{t("chat.no_files")}</p>
-                ) : (
-                  storedFiles.map((file) => (
+            <div className="flex items-end gap-2">
+
+              {/* ── Attach button + popup menu ── */}
+              <div className="relative shrink-0" ref={attachMenuRef}>
+
+                {/* Hidden image file input */}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageFile(file);
+                    e.target.value = "";
+                  }}
+                />
+
+                {/* Attach menu popup */}
+                {showAttachMenu && (
+                  <div
+                    className="absolute bottom-full left-0 mb-2 rounded-xl border shadow-xl overflow-hidden"
+                    style={{
+                      borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                      backgroundColor: "var(--background)",
+                      minWidth: 190,
+                    }}
+                  >
+                    {/* Upload image option */}
                     <button
-                      key={file.id}
-                      onClick={() => { setSelectedFile(file); setShowFileMenu(false); }}
-                      className="w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 text-muted-foreground transition-all"
+                      onClick={() => { imageInputRef.current?.click(); setShowAttachMenu(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground transition-all"
                       onMouseEnter={(e) => {
                         (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
                         (e.currentTarget as HTMLButtonElement).style.color = "var(--theme-badge-text)";
@@ -618,25 +699,61 @@ const ChatPage = () => {
                         (e.currentTarget as HTMLButtonElement).style.color = "";
                       }}
                     >
-                      <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
-                      {file.name}
+                      <ImageIcon className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
+                      Upload image
                     </button>
-                  ))
-                )}
-              </div>
-            )}
 
-            <div className="flex items-end gap-2">
-              <button
-                onClick={() => setShowFileMenu((p) => !p)}
-                className="p-2 rounded-xl transition-all shrink-0"
-                style={{ color: showFileMenu ? "var(--theme-primary)" : "var(--muted-foreground)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.1)`; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
-                title={t("chat.attach")}
-              >
-                <Paperclip className="w-4 h-4" />
-              </button>
+                    {/* Divider */}
+                    <div className="h-px mx-2" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
+
+                    {/* File library options */}
+                    {loadingFiles ? (
+                      <div className="p-2 space-y-1">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="h-8 rounded-lg animate-pulse"
+                            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }} />
+                        ))}
+                      </div>
+                    ) : storedFiles.length === 0 ? (
+                      <p className="text-xs text-muted-foreground/50 px-4 py-2.5">{t("chat.no_files")}</p>
+                    ) : (
+                      <div className="max-h-40 overflow-y-auto">
+                        {storedFiles.map((file) => (
+                          <button
+                            key={file.id}
+                            onClick={() => { setSelectedFile(file); setShowAttachMenu(false); }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground transition-all"
+                            onMouseEnter={(e) => {
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
+                              (e.currentTarget as HTMLButtonElement).style.color = "var(--theme-badge-text)";
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                              (e.currentTarget as HTMLButtonElement).style.color = "";
+                            }}
+                          >
+                            <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
+                            <span className="truncate">{file.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Paperclip button */}
+                <button
+                  onClick={() => setShowAttachMenu((p) => !p)}
+                  className="p-2 rounded-xl transition-all"
+                  style={{ color: showAttachMenu ? "var(--theme-primary)" : "var(--muted-foreground)" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.1)`; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+                  title={t("chat.attach")}
+                  disabled={loading || !activeSessionId}
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+              </div>
 
               <textarea
                 ref={textareaRef}
@@ -651,9 +768,9 @@ const ChatPage = () => {
 
               <button
                 onClick={() => handleSend()}
-                disabled={loading || (!input.trim() && !selectedFile)}
+                disabled={loading || (!input.trim() && !selectedFile && !image)}
                 className="p-2.5 rounded-xl shrink-0 transition-all disabled:opacity-30"
-                style={{ background: "var(--theme-gradient)", color: "#fff" }}
+                style={{ background: "var(--theme-primary)", color: "#fff" }}
               >
                 <Send className="w-4 h-4" />
               </button>

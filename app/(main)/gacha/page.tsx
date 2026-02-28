@@ -61,7 +61,7 @@ const GachaPage = () => {
       <div className="mb-10">
         <h1 className="text-4xl font-black mb-1">{t("gacha.title")}</h1>
         <p className="text-muted-foreground text-sm">{t("gacha.subtitle")}</p>
-        <div className="mt-3 h-px w-12" style={{ background: "var(--theme-gradient)" }} />
+        <div className="mt-3 h-px w-12" style={{ background: "var(--theme-primary)" }} />
       </div>
 
       {/* Gem balance */}
@@ -175,7 +175,7 @@ const GachaPage = () => {
             disabled={spinning || gems < SPIN_COST}
             className="px-8 py-3 rounded-xl font-black text-sm transition-all disabled:opacity-40 hover:brightness-110 hover:scale-105 active:scale-95"
             style={{
-              background: "var(--theme-gradient)",
+              background: "var(--theme-primary)",
               color: "#fff",
               textShadow: "0 1px 3px rgba(0,0,0,0.3)",
             }}

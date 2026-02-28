@@ -174,7 +174,7 @@ const BrowsePage = () => {
         </p>
         <div
           className="mt-4 h-px w-16"
-          style={{ background: "var(--theme-gradient)" }}
+          style={{ background: "var(--theme-primary)" }}
         />
       </div>
 

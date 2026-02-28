@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { LayersIcon, LayoutGrid, FileText, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
-import { getFiles, getDecks, saveDeck, DBFile } from "@/lib/db";
+import { getFiles, getDecks, saveDeck, DBFile, logActivity } from "@/lib/db";
 
 const gradientBtn: React.CSSProperties = {
-  background: "var(--theme-gradient)",
+  background: "var(--theme-primary)",
   color: "#fff",
   textShadow: "0 1px 3px rgba(0,0,0,0.3)",
 };
@@ -75,7 +75,7 @@ const FlashcardsPage = () => {
           setError(t("flash.error.failed"));
           return;
         }
-
+        await logActivity();
         router.push(`/flashcards/study?id=${newDeck.id}`);
       } else {
         setError(data.error || t("flash.error.failed"));

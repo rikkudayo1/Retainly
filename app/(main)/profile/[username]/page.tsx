@@ -9,13 +9,14 @@ import {
   getStarredDeckIds,
   unpublishDeck,
   deleteDeck,
+  getActivityHeatmap,
   PublicDeck,
 } from "@/lib/db";
 import { getBanner } from "@/lib/banners";
 import BannerPicker from "@/components/BannerPicker";
 import { createClient } from "@/lib/supabase";
-
 import PublicDeckCard from "@/components/PublicDeckCard";
+import ActivityHeatmap from "@/components/ActivityHeatmap";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface ProfileData {
@@ -38,6 +39,7 @@ const ProfilePage = () => {
   const [notFound, setNotFound] = useState(false);
   const [publishedDecks, setPublishedDecks] = useState<PublicDeck[]>([]);
   const [loadingDecks, setLoadingDecks] = useState(true);
+  const [activityData, setActivityData] = useState<Record<string, number>>({});
   const [addedIds, setAddedIds] = useState<string[]>(() => {
     try {
       const saved = sessionStorage.getItem("retainly_added_decks");
@@ -49,7 +51,7 @@ const ProfilePage = () => {
   const { t } = useLanguage();
 
   useEffect(() => {
-    let isMounted = true; // prevent state update after unmount
+    let isMounted = true;
 
     const load = async () => {
       try {
@@ -58,7 +60,6 @@ const ProfilePage = () => {
 
         const supabase = createClient();
 
-        // Fetch profile + current user in parallel
         const [
           profileData,
           {
@@ -81,16 +82,17 @@ const ProfilePage = () => {
         setBannerId(profileData.banner_id ?? "aurora");
         setIsOwn(currentUser?.id === profileData.id);
 
-        // Fetch deck-related data in parallel
-        const [deckCount, decks, starredIds] = await Promise.all([
+        const [deckCount, decks, starredIds, heatmap] = await Promise.all([
           getPublishedDeckCountByUserId(profileData.id),
           getPublicDecks("", "newest", "desc", 1, 100),
           getStarredDeckIds(),
+          getActivityHeatmap(profileData.id),
         ]);
 
         if (!isMounted) return;
 
         setDeckCount(deckCount);
+        setActivityData(heatmap);
 
         const userDecks = decks
           .filter((d) => d.user_id === profileData.id)
@@ -101,7 +103,6 @@ const ProfilePage = () => {
 
         setPublishedDecks(userDecks);
 
-        // Handle "already added" decks
         if (currentUser) {
           const { data: ownDecks } = await supabase
             .from("decks")
@@ -149,7 +150,7 @@ const ProfilePage = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div
-          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+          className="w-8 h-8 rounded-full border-2 animate-spin"
           style={{
             borderColor: "var(--theme-primary)",
             borderTopColor: "transparent",
@@ -164,7 +165,7 @@ const ProfilePage = () => {
         <p className="text-4xl">👤</p>
         <p className="font-bold text-lg">{t("profile.not_found")}</p>
         <p className="text-sm text-muted-foreground">
-          @{username} {' '} {t("profile.not_found_sub")}
+          @{username} {t("profile.not_found_sub")}
         </p>
       </div>
     );
@@ -175,7 +176,7 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-background text-foreground">
       {/* Banner */}
       <div
-        className="relative w-full h-48 sm:h-56"
+        className="relative w-full h-48 sm:h-56 banner-bg"
         style={{ background: banner.gradient }}
       >
         {isOwn && (
@@ -188,9 +189,8 @@ const ProfilePage = () => {
         )}
       </div>
 
-      {/* Profile content */}
       <div className="max-w-2xl mx-auto px-6">
-        {/* Avatar — overlaps banner */}
+        {/* Avatar */}
         <div className="relative -mt-12 mb-4 flex items-end justify-between">
           <div
             className="w-24 h-24 rounded-full overflow-hidden border-4 shrink-0"
@@ -252,8 +252,13 @@ const ProfilePage = () => {
           </div>
         </div>
 
+        {/* Activity Heatmap */}
+        <div className="mb-8">
+          <ActivityHeatmap data={activityData} />
+        </div>
+
         {/* Published decks */}
-        <div className="space-y-4">
+        <div className="space-y-4 pb-12">
           <h2
             className="text-sm font-bold uppercase tracking-widest"
             style={{ color: "var(--theme-badge-text)" }}
@@ -297,10 +302,13 @@ const ProfilePage = () => {
                   onAdded={(id) => {
                     setAddedIds((prev) => {
                       const next = [...new Set([...prev, id])];
-                      sessionStorage.setItem("retainly_added_decks", JSON.stringify(next));
+                      sessionStorage.setItem(
+                        "retainly_added_decks",
+                        JSON.stringify(next),
+                      );
                       return next;
                     });
-                  }} 
+                  }}
                   onUnpublish={
                     isOwn
                       ? async (id) => {
