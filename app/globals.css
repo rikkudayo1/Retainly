@@ -52,80 +52,121 @@
 }
 
 /* ============================================================
-   COLOR SCHEME — LIGHT
+   COLOR SCHEME — LIGHT (Cool & Minimal)
+   True white base, crisp slate tones, clean slate-blue accents
    ============================================================ */
 
 :root {
   --radius: 0.625rem;
+
+  /* Base */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --foreground: oklch(0.18 0.02 255);
+
+  /* Cards — barely off-white so they lift from background */
+  --card: oklch(0.99 0.004 255);
+  --card-foreground: oklch(0.18 0.02 255);
+  --popover: oklch(0.99 0.004 255);
+  --popover-foreground: oklch(0.18 0.02 255);
+
+  /* Primary — deep slate blue */
+  --primary: oklch(0.32 0.06 255);
+  --primary-foreground: oklch(0.99 0.004 255);
+
+  /* Secondary — light cool gray */
+  --secondary: oklch(0.95 0.008 255);
+  --secondary-foreground: oklch(0.32 0.06 255);
+
+  /* Muted */
+  --muted: oklch(0.96 0.006 255);
+  --muted-foreground: oklch(0.52 0.02 255);
+
+  /* Accent */
+  --accent: oklch(0.95 0.008 255);
+  --accent-foreground: oklch(0.32 0.06 255);
+
+  /* Destructive */
+  --destructive: oklch(0.58 0.22 25);
+
+  /* Borders */
+  --border: oklch(0.91 0.01 255);
+  --input: oklch(0.91 0.01 255);
+  --ring: oklch(0.55 0.05 255);
+
+  /* Charts */
+  --chart-1: oklch(0.52 0.18 255);
+  --chart-2: oklch(0.62 0.14 200);
+  --chart-3: oklch(0.48 0.12 230);
+  --chart-4: oklch(0.70 0.10 280);
+  --chart-5: oklch(0.58 0.16 215);
+
+  /* Sidebar — cool white tint, distinct from page */
+  --sidebar: oklch(0.975 0.007 255);
+  --sidebar-foreground: oklch(0.18 0.02 255);
+  --sidebar-primary: oklch(0.32 0.06 255);
+  --sidebar-primary-foreground: oklch(0.99 0.004 255);
+  --sidebar-accent: oklch(0.95 0.008 255);
+  --sidebar-accent-foreground: oklch(0.32 0.06 255);
+  --sidebar-border: oklch(0.91 0.01 255);
+  --sidebar-ring: oklch(0.55 0.05 255);
 }
 
 /* ============================================================
-   COLOR SCHEME — DARK
+   COLOR SCHEME — DARK (Soft Dark)
+   Warm-neutral dark gray base, gentle layering, easy on the eyes
    ============================================================ */
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  /* Base — dark gray with the tiniest warm tint, not cold or blue */
+  --background: oklch(0.18 0.004 285);
+  --foreground: oklch(0.92 0.006 285);
+
+  /* Cards — just a touch lighter so surfaces stack naturally */
+  --card: oklch(0.22 0.005 285);
+  --card-foreground: oklch(0.92 0.006 285);
+  --popover: oklch(0.22 0.005 285);
+  --popover-foreground: oklch(0.92 0.006 285);
+
+  /* Primary — soft periwinkle blue, not harsh, not boring */
+  --primary: oklch(0.68 0.10 255);
+  --primary-foreground: oklch(0.18 0.004 285);
+
+  /* Secondary — medium gray fill */
+  --secondary: oklch(0.27 0.006 285);
+  --secondary-foreground: oklch(0.92 0.006 285);
+
+  /* Muted */
+  --muted: oklch(0.27 0.006 285);
+  --muted-foreground: oklch(0.58 0.01 285);
+
+  /* Accent */
+  --accent: oklch(0.29 0.007 285);
+  --accent-foreground: oklch(0.92 0.006 285);
+
+  /* Destructive */
+  --destructive: oklch(0.65 0.18 22);
+
+  /* Borders — subtle, not invisible */
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.68 0.10 255 / 55%);
+
+  /* Charts */
+  --chart-1: oklch(0.65 0.14 255);
+  --chart-2: oklch(0.66 0.12 195);
+  --chart-3: oklch(0.70 0.10 165);
+  --chart-4: oklch(0.62 0.14 300);
+  --chart-5: oklch(0.68 0.13 30);
+
+  /* Sidebar — slightly darker than background so it sits back */
+  --sidebar: oklch(0.15 0.004 285);
+  --sidebar-foreground: oklch(0.92 0.006 285);
+  --sidebar-primary: oklch(0.68 0.10 255);
+  --sidebar-primary-foreground: oklch(0.18 0.004 285);
+  --sidebar-accent: oklch(0.27 0.006 285);
+  --sidebar-accent-foreground: oklch(0.92 0.006 285);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.68 0.10 255 / 55%);
 }
 
 /* ============================================================
@@ -147,12 +188,10 @@
    PIXEL STYLE MODE
    ============================================================ */
 
-/* Override radius token so all calc()-based radius values collapse to 0 */
 :root[data-style="pixel"] {
   --radius: 0px;
 }
 
-/* Global resets for pixel mode */
 [data-style="pixel"] * {
   border-radius: 0 !important;
   transition: none !important;
@@ -162,7 +201,6 @@
   font-family: 'Courier New', Courier, monospace;
 }
 
-/* Headings */
 [data-style="pixel"] h1,
 [data-style="pixel"] h2,
 [data-style="pixel"] h3 {
@@ -171,14 +209,12 @@
   text-transform: uppercase;
 }
 
-/* Cards — chunky border + hard drop shadow */
 [data-style="pixel"] .border {
   border-width: 2px !important;
   box-shadow: 3px 3px 0px var(--theme-primary) !important;
   background-color: var(--background) !important;
 }
 
-/* Buttons — solid bg, press-down active state */
 [data-style="pixel"] button[style*="gradient"] {
   background: var(--theme-primary) !important;
 }
@@ -188,7 +224,6 @@
   box-shadow: 1px 1px 0px var(--theme-primary) !important;
 }
 
-/* Input focus — solid outline instead of glow */
 [data-style="pixel"] input:focus,
 [data-style="pixel"] textarea:focus {
   outline: 2px solid var(--theme-primary) !important;
@@ -196,8 +231,6 @@
   box-shadow: none !important;
 }
 
-/* Force inline gradient styles through — unset clears any CSS-layer bg
-   so the inline style attribute takes full control. */
 [data-style="pixel"] .banner-bg,
 [data-style="pixel"] .banner-preview,
 [data-style="pixel"] .banner-gradient {
@@ -205,16 +238,8 @@
   background-color: unset;
 }
 
-/* Drawer shell */
 [data-style="pixel"] [data-vaul-drawer],
 [data-style="pixel"] [data-vaul-drawer-content] {
   border-radius: 0 !important;
   background-color: var(--background) !important;
 }
-
-/*
-  DO NOT add a blanket [class*="absolute"] background override here.
-  It clobbers picker overlays (labels, checkmarks, scrim divs) that rely
-  on rgba/inline background styles set directly on the element.
-  Scope overrides to specific components via dedicated classes instead.
-*/

@@ -9,6 +9,7 @@ import {
   FileText,
   Plus,
   ImageIcon,
+  Terminal,
 } from "lucide-react";
 import { getFiles, DBFile } from "@/lib/db";
 import MarkdownContent from "@/components/MarkdownContent";
@@ -35,48 +36,68 @@ const NewChatModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative w-full max-w-sm rounded-2xl border shadow-2xl p-6 space-y-4"
+        className="relative w-full max-w-sm rounded-2xl border shadow-2xl overflow-hidden"
         style={{ backgroundColor: "var(--background)", borderColor: `rgb(var(--theme-glow) / 0.2)` }}
       >
-        <div>
-          <h2 className="text-base font-black">{t("chat.new")}</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("chat.new_name")}</p>
-        </div>
-        <input
-          ref={inputRef}
-          type="text"
-          className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all"
+        {/* Terminal titlebar */}
+        <div
+          className="flex items-center gap-1.5 px-4 py-2.5 border-b font-mono text-[10px]"
           style={{
-            borderColor: `rgb(var(--theme-glow) / 0.2)`,
-            backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-            color: "var(--foreground)",
+            borderColor: `rgb(var(--theme-glow) / 0.1)`,
+            backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
+            color: `rgb(var(--theme-glow) / 0.4)`,
           }}
-          placeholder={t("chat.name_ph")}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") onClose(); }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.2)`; }}
-          maxLength={60}
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all"
-            style={{ borderColor: `rgb(var(--theme-glow) / 0.2)`, color: "var(--muted-foreground)" }}
+        >
+          <span className="w-2 h-2 rounded-full bg-red-400/50" />
+          <span className="w-2 h-2 rounded-full bg-yellow-400/50" />
+          <span className="w-2 h-2 rounded-full bg-green-400/50" />
+          <span className="ml-3">new_session.sh</span>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <h2 className="text-base font-black">{t("chat.new")}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5 font-mono">{t("chat.new_name")}</p>
+          </div>
+          <div
+            className="flex items-center gap-2 rounded-xl border px-4 py-2.5 font-mono text-sm"
+            style={{
+              borderColor: `rgb(var(--theme-glow) / 0.2)`,
+              backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
+            }}
           >
-            {t("chat.cancel")}
-          </button>
-          <button
-            onClick={submit}
-            disabled={!title.trim()}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
-            style={{ background: "var(--theme-primary)", color: "#fff" }}
-          >
-            {t("chat.start")}
-          </button>
+            <span style={{ color: "var(--theme-primary)" }}>$</span>
+            <input
+              ref={inputRef}
+              type="text"
+              className="flex-1 bg-transparent outline-none"
+              style={{ color: "var(--foreground)" }}
+              placeholder={t("chat.name_ph")}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") onClose(); }}
+              maxLength={60}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all"
+              style={{ borderColor: `rgb(var(--theme-glow) / 0.2)`, color: "var(--muted-foreground)" }}
+            >
+              {t("chat.cancel")}
+            </button>
+            <button
+              onClick={submit}
+              disabled={!title.trim()}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+              style={{ background: "var(--theme-primary)", color: "#fff" }}
+            >
+              {t("chat.start")}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -97,24 +118,21 @@ const RenameInput = ({
   const [val, setVal] = React.useState(defaultValue);
   const ref = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
-    ref.current?.focus();
-    ref.current?.select();
-  }, []);
+  React.useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
 
   return (
     <input
       ref={ref}
-      className="outline-none bg-transparent text-xs w-24 border-b"
+      className="outline-none bg-transparent text-xs w-24 border-b font-mono"
       style={{ borderColor: "var(--theme-primary)", color: "var(--foreground)" }}
       value={val}
       onChange={(e) => setVal(e.target.value)}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === "Enter") { const trimmed = val.trim(); if (trimmed) onConfirm(trimmed); }
+        if (e.key === "Enter") { const t = val.trim(); if (t) onConfirm(t); }
         if (e.key === "Escape") onCancel();
       }}
-      onBlur={() => { const trimmed = val.trim(); if (trimmed) onConfirm(trimmed); else onCancel(); }}
+      onBlur={() => { const t = val.trim(); if (t) onConfirm(t); else onCancel(); }}
       maxLength={60}
     />
   );
@@ -140,22 +158,24 @@ const ChatTab = ({
 
   return (
     <div
-      className="group relative flex items-center gap-2 px-4 py-0 shrink-0 cursor-pointer select-none transition-all"
+      className="group relative flex items-center gap-1.5 px-3 py-0 shrink-0 cursor-pointer select-none transition-all"
       style={{
         height: "100%",
-        borderRight: `1px solid rgb(var(--theme-glow) / 0.1)`,
+        borderRight: `1px solid rgb(var(--theme-glow) / 0.08)`,
         backgroundColor: isActive ? "var(--background)" : "transparent",
         borderBottom: isActive ? "2px solid var(--theme-primary)" : "2px solid transparent",
-        borderTop: isActive ? `1px solid rgb(var(--theme-glow) / 0.15)` : "1px solid transparent",
       }}
       onClick={onClick}
       onDoubleClick={() => setRenaming(true)}
       title={t("chat.rename_hint")}
     >
-      <Sparkles
-        className="w-3 h-3 shrink-0"
-        style={{ color: isActive ? "var(--theme-primary)" : "var(--muted-foreground)", opacity: isActive ? 1 : 0.5 }}
-      />
+      {/* Active indicator dot */}
+      {isActive && (
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: "var(--theme-primary)" }}
+        />
+      )}
 
       {renaming ? (
         <RenameInput
@@ -165,7 +185,7 @@ const ChatTab = ({
         />
       ) : (
         <span
-          className="text-sm max-w-[140px] truncate"
+          className="text-xs font-mono max-w-[120px] truncate"
           style={{ color: isActive ? "var(--foreground)" : "var(--muted-foreground)" }}
         >
           {title}
@@ -173,10 +193,9 @@ const ChatTab = ({
       )}
 
       <button
-        className="w-4 h-4 rounded flex items-center justify-center transition-opacity shrink-0"
+        className="w-4 h-4 rounded flex items-center justify-center shrink-0"
         style={{ color: "var(--muted-foreground)" }}
         onClick={onClose}
-        title={t("chat.cancel")}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.15)`;
           (e.currentTarget as HTMLButtonElement).style.color = "var(--foreground)";
@@ -188,6 +207,110 @@ const ChatTab = ({
       >
         <X className="w-2.5 h-2.5" />
       </button>
+    </div>
+  );
+};
+
+// ─── Typing indicator ─────────────────────────────────────────
+
+const TypingDots = () => (
+  <span className="flex items-center gap-1 py-0.5">
+    {[0, 150, 300].map((delay) => (
+      <span
+        key={delay}
+        className="w-1.5 h-1.5 rounded-full animate-bounce"
+        style={{ backgroundColor: "var(--theme-primary)", animationDelay: `${delay}ms` }}
+      />
+    ))}
+  </span>
+);
+
+// ─── Message bubble ───────────────────────────────────────────
+
+const MessageBubble = ({
+  msg,
+  isStreaming,
+}: {
+  msg: { role: "user" | "assistant"; content: string; attachedFileName?: string | null; attachedImageName?: string | null };
+  isStreaming?: boolean;
+}) => {
+  const isUser = msg.role === "user";
+
+  return (
+    <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"} msg-enter`}>
+      {!isUser && (
+        <div
+          className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5 border"
+          style={{
+            background: `rgb(var(--theme-glow) / 0.08)`,
+            borderColor: `rgb(var(--theme-glow) / 0.15)`,
+          }}
+        >
+          <Sparkles className="w-3.5 h-3.5" style={{ color: "var(--theme-primary)" }} />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5 min-w-0" style={{ maxWidth: "min(42rem, calc(100vw - 5rem))" }}>
+        {/* Attachment badges */}
+        {isUser && msg.attachedFileName && (
+          <div className="flex justify-end">
+            <span
+              className="text-xs px-2.5 py-1 rounded-lg border flex items-center gap-1.5 font-mono"
+              style={{
+                borderColor: `rgb(var(--theme-glow) / 0.25)`,
+                backgroundColor: `rgb(var(--theme-glow) / 0.06)`,
+                color: "var(--theme-badge-text)",
+              }}
+            >
+              <FileText className="w-3 h-3" />
+              {msg.attachedFileName}
+            </span>
+          </div>
+        )}
+        {isUser && msg.attachedImageName && (
+          <div className="flex justify-end">
+            <span
+              className="text-xs px-2.5 py-1 rounded-lg border flex items-center gap-1.5 font-mono"
+              style={{
+                borderColor: `rgb(var(--theme-glow) / 0.25)`,
+                backgroundColor: `rgb(var(--theme-glow) / 0.06)`,
+                color: "var(--theme-badge-text)",
+              }}
+            >
+              <ImageIcon className="w-3 h-3" />
+              {msg.attachedImageName}
+            </span>
+          </div>
+        )}
+
+        {/* Bubble */}
+        <div
+          className={`px-4 py-3 text-sm leading-relaxed ${isUser ? "rounded-2xl rounded-br-sm" : "rounded-2xl rounded-bl-sm"}`}
+          style={
+            isUser
+              ? {
+                  backgroundColor: "var(--theme-primary)",
+                  color: "#fff",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.15)",
+                }
+              : {
+                  backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
+                  border: `1px solid rgb(var(--theme-glow) / 0.12)`,
+                  color: "var(--foreground)",
+                }
+          }
+        >
+          {!isUser ? (
+            isStreaming && msg.content === "" ? (
+              <TypingDots />
+            ) : (
+              <MarkdownContent content={msg.content} />
+            )
+          ) : (
+            msg.content
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -365,6 +488,24 @@ const ChatPage = () => {
 
   return (
     <>
+      <style>{`
+        @keyframes msgIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .msg-enter { animation: msgIn 0.25s cubic-bezier(0.22,1,0.36,1) forwards; }
+        .attach-menu-enter {
+          animation: msgIn 0.18s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .chat-scroll::-webkit-scrollbar { width: 4px; }
+        .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb {
+          background: rgb(var(--theme-glow) / 0.2);
+          border-radius: 99px;
+        }
+        .chat-scroll { scrollbar-width: thin; scrollbar-color: rgb(var(--theme-glow) / 0.2) transparent; }
+      `}</style>
+
       {showNewChatModal && (
         <NewChatModal
           onConfirm={async (title) => { setShowNewChatModal(false); await startNewChat(title); }}
@@ -374,35 +515,39 @@ const ChatPage = () => {
 
       <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
 
-        {/* ── Tab Bar ── */}
+        {/* ── Tab bar ───────────────────────────────────── */}
         <div
-          className="flex items-stretch shrink-0 border-b overflow-hidden"
+          className="flex items-stretch shrink-0 border-b"
           style={{
-            borderColor: `rgb(var(--theme-glow) / 0.12)`,
-            backgroundColor: `rgb(var(--theme-glow) / 0.02)`,
-            height: 48,
+            borderColor: `rgb(var(--theme-glow) / 0.1)`,
+            backgroundColor: `rgb(var(--theme-glow) / 0.015)`,
+            height: 40,
           }}
         >
+          {/* Terminal icon */}
+          <div
+            className="flex items-center px-3 border-r shrink-0"
+            style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}
+          >
+            <Terminal className="w-3.5 h-3.5" style={{ color: `rgb(var(--theme-glow) / 0.35)` }} />
+          </div>
+
+          {/* Tabs */}
           <div
             ref={tabBarRef}
             className="flex items-stretch overflow-x-auto flex-1 min-w-0"
             style={{ scrollbarWidth: "none" }}
           >
-            <style>{`.tab-bar::-webkit-scrollbar { display: none; }`}</style>
-
             {loadingSessions ? (
-              <div className="flex items-center gap-px px-2">
-                {[1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="h-5 w-24 rounded animate-pulse mx-1"
-                    style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)` }}
-                  />
+              <div className="flex items-center gap-2 px-3">
+                {[80, 110].map((w, i) => (
+                  <div key={i} className="h-4 rounded animate-pulse"
+                    style={{ width: w, backgroundColor: `rgb(var(--theme-glow) / 0.07)` }} />
                 ))}
               </div>
             ) : sessions.length === 0 ? (
               <div className="flex items-center px-4">
-                <span className="text-xs text-muted-foreground/40">{t("chat.no_chats")}</span>
+                <span className="text-xs font-mono text-muted-foreground/35">{t("chat.no_chats")}</span>
               </div>
             ) : (
               sessions.map((session) => (
@@ -419,13 +564,11 @@ const ChatPage = () => {
             )}
           </div>
 
+          {/* New chat button */}
           <button
             onClick={() => setShowNewChatModal(true)}
             className="flex items-center justify-center px-3 shrink-0 border-l transition-all"
-            style={{
-              borderColor: `rgb(var(--theme-glow) / 0.1)`,
-              color: "var(--muted-foreground)",
-            }}
+            style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--muted-foreground)" }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
               (e.currentTarget as HTMLButtonElement).style.color = "var(--theme-primary)";
@@ -440,24 +583,35 @@ const ChatPage = () => {
           </button>
         </div>
 
-        {/* ── Active session title bar ── */}
+        {/* ── Session info bar ──────────────────────────── */}
         {activeSession && (
           <div
-            className="flex items-center gap-2 px-5 py-2 border-b shrink-0"
+            className="flex items-center gap-3 px-5 py-1.5 border-b shrink-0"
             style={{
-              borderColor: `rgb(var(--theme-glow) / 0.08)`,
+              borderColor: `rgb(var(--theme-glow) / 0.07)`,
               backgroundColor: `rgb(var(--theme-glow) / 0.01)`,
             }}
           >
-            <span className="text-xs text-muted-foreground/50 truncate">
-              {activeSession.title}
+            <span
+              className="font-mono text-[10px] tracking-widest"
+              style={{ color: `rgb(var(--theme-glow) / 0.35)` }}
+            >
+              // {activeSession.title}
             </span>
+            {messages.length > 0 && (
+              <span
+                className="font-mono text-[10px]"
+                style={{ color: `rgb(var(--theme-glow) / 0.25)` }}
+              >
+                {messages.length} msg{messages.length !== 1 ? "s" : ""}
+              </span>
+            )}
             {contextFile && (
               <span
-                className="text-xs px-2 py-0.5 rounded-full border flex items-center gap-1 shrink-0 ml-auto"
+                className="ml-auto text-xs px-2 py-0.5 rounded-lg border flex items-center gap-1.5 font-mono shrink-0"
                 style={{
-                  borderColor: `rgb(var(--theme-glow) / 0.25)`,
-                  backgroundColor: `rgb(var(--theme-glow) / 0.07)`,
+                  borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                  backgroundColor: `rgb(var(--theme-glow) / 0.05)`,
                   color: "var(--theme-badge-text)",
                 }}
               >
@@ -471,27 +625,36 @@ const ChatPage = () => {
           </div>
         )}
 
-        {/* ── Messages ── */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* ── Messages area ─────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto chat-scroll px-4 sm:px-6 py-6 space-y-5">
 
-          {/* No session */}
+          {/* No session empty state */}
           {!activeSessionId && !loadingSessions && (
-            <div className="flex flex-col items-center justify-center h-full text-center gap-5">
+            <div className="flex flex-col items-center justify-center h-full text-center gap-6">
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: `rgb(var(--theme-glow) / 0.1)` }}
+                className="w-14 h-14 rounded-2xl border flex items-center justify-center"
+                style={{
+                  borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                  backgroundColor: `rgb(var(--theme-glow) / 0.05)`,
+                }}
               >
-                <Sparkles className="w-8 h-8" style={{ color: "var(--theme-primary)" }} />
+                <Terminal className="w-7 h-7" style={{ color: "var(--theme-primary)" }} />
               </div>
-              <div>
-                <h1 className="text-2xl font-black mb-2">{t("chat.title")}</h1>
-                <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
+              <div className="space-y-2">
+                <p
+                  className="font-mono text-xs tracking-widest"
+                  style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
+                >
+                  // no active session
+                </p>
+                <h2 className="text-2xl font-black">{t("chat.title")}</h2>
+                <p className="text-muted-foreground text-sm max-w-xs leading-relaxed">
                   {t("chat.empty")}
                 </p>
               </div>
               <button
                 onClick={() => setShowNewChatModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold font-mono transition-all"
                 style={{ background: "var(--theme-primary)", color: "#fff" }}
               >
                 <Plus className="w-4 h-4" /> {t("chat.new")}
@@ -499,171 +662,110 @@ const ChatPage = () => {
             </div>
           )}
 
-          {/* Loading messages */}
+          {/* Loading spinner */}
           {loadingMessages && (
             <div className="flex items-center justify-center h-full">
               <div
-                className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
+                className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
                 style={{ borderColor: "var(--theme-primary)", borderTopColor: "transparent" }}
               />
             </div>
           )}
 
-          {/* Empty session */}
+          {/* Empty session state */}
           {activeSessionId && !loadingMessages && displayMessages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-              <Sparkles className="w-8 h-8 opacity-20" style={{ color: "var(--theme-primary)" }} />
-              <p className="text-sm text-muted-foreground/50">
+              <Sparkles className="w-7 h-7 opacity-15" style={{ color: "var(--theme-primary)" }} />
+              <p
+                className="font-mono text-xs"
+                style={{ color: `rgb(var(--theme-glow) / 0.3)` }}
+              >
                 {t("chat.session_empty")}
               </p>
             </div>
           )}
 
-          {/* Message bubbles */}
+          {/* Messages */}
           {!loadingMessages && displayMessages.map((msg, i) => (
-            <div
+            <MessageBubble
               key={i}
-              className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {msg.role === "assistant" && (
-                <div
-                  className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center mt-0.5"
-                  style={{ background: `rgb(var(--theme-glow) / 0.12)` }}
-                >
-                  <Sparkles className="w-4 h-4" style={{ color: "var(--theme-primary)" }} />
-                </div>
-              )}
-              <div className="flex flex-col gap-1 min-w-0" style={{ maxWidth: "min(42rem, calc(100vw - 5rem))" }}>
-                {/* File attachment badge */}
-                {msg.role === "user" && msg.attachedFileName && (
-                  <div className="flex justify-end">
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full border flex items-center gap-1.5"
-                      style={{
-                        borderColor: `rgb(var(--theme-glow) / 0.3)`,
-                        backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
-                        color: "var(--theme-badge-text)",
-                      }}
-                    >
-                      <FileText className="w-3 h-3" />
-                      {msg.attachedFileName}
-                    </span>
-                  </div>
-                )}
-                {/* Image attachment badge */}
-                {msg.role === "user" && msg.attachedImageName && (
-                  <div className="flex justify-end">
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full border flex items-center gap-1.5"
-                      style={{
-                        borderColor: `rgb(var(--theme-glow) / 0.3)`,
-                        backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
-                        color: "var(--theme-badge-text)",
-                      }}
-                    >
-                      <ImageIcon className="w-3 h-3" />
-                      {msg.attachedImageName}
-                    </span>
-                  </div>
-                )}
-                <div
-                  className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"}`}
-                  style={
-                    msg.role === "user"
-                      ? { backgroundColor: "var(--theme-primary)", color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.2)" }
-                      : { backgroundColor: `rgb(var(--theme-glow) / 0.06)`, border: `1px solid rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)" }
-                  }
-                >
-                  {msg.role === "assistant" ? (
-                    msg.content === "" && loading && i === displayMessages.length - 1 ? (
-                      <span className="flex items-center gap-1.5 py-0.5">
-                        {[0, 150, 300].map((delay) => (
-                          <span
-                            key={delay}
-                            className="w-1.5 h-1.5 rounded-full animate-bounce"
-                            style={{ backgroundColor: "var(--theme-primary)", animationDelay: `${delay}ms` }}
-                          />
-                        ))}
-                      </span>
-                    ) : (
-                      <MarkdownContent content={msg.content} />
-                    )
-                  ) : (
-                    msg.content
-                  )}
-                </div>
-              </div>
-            </div>
+              msg={msg}
+              isStreaming={loading && i === displayMessages.length - 1 && msg.role === "assistant"}
+            />
           ))}
 
           <div ref={bottomRef} />
         </div>
 
-        {/* ── Input area ── */}
-        <div className="px-4 sm:px-6 pb-5 shrink-0">
+        {/* ── Input area ────────────────────────────────── */}
+        <div className="px-4 sm:px-6 pb-5 pt-2 shrink-0">
           <div
-            className="rounded-2xl border px-4 py-3"
+            className="rounded-2xl border overflow-hidden"
             style={{
-              borderColor: `rgb(var(--theme-glow) / 0.2)`,
-              backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
+              borderColor: `rgb(var(--theme-glow) / 0.18)`,
+              backgroundColor: `rgb(var(--theme-glow) / 0.025)`,
             }}
           >
-            {/* Image preview pill */}
-            {image && (
-              <div className="flex items-center gap-2 mb-2.5">
-                <div
-                  className="relative flex items-center gap-2 px-2 py-1.5 rounded-xl border"
-                  style={{
-                    borderColor: `rgb(var(--theme-glow) / 0.25)`,
-                    backgroundColor: `rgb(var(--theme-glow) / 0.05)`,
-                  }}
-                >
-                  <img
-                    src={`data:${image.mimeType};base64,${image.base64}`}
-                    alt={image.name}
-                    className="w-10 h-10 rounded-lg object-cover border shrink-0"
-                    style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}
-                  />
-                  <span className="text-xs truncate max-w-[120px]" style={{ color: "var(--theme-badge-text)" }}>
-                    {image.name}
-                  </span>
-                  <button
-                    onClick={() => setImage(null)}
-                    className="shrink-0 w-5 h-5 rounded-md flex items-center justify-center hover:opacity-70 transition-opacity"
-                    style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)`, color: "var(--muted-foreground)" }}
+            {/* Attachment previews */}
+            {(image || selectedFile) && (
+              <div
+                className="flex items-center gap-2 px-4 pt-3 pb-2 border-b"
+                style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}
+              >
+                {image && (
+                  <div
+                    className="relative flex items-center gap-2 px-2.5 py-1.5 rounded-xl border"
+                    style={{
+                      borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                      backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
+                    }}
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
+                    <img
+                      src={`data:${image.mimeType};base64,${image.base64}`}
+                      alt={image.name}
+                      className="w-8 h-8 rounded-lg object-cover"
+                    />
+                    <span className="font-mono text-xs truncate max-w-[100px]" style={{ color: "var(--theme-badge-text)" }}>
+                      {image.name}
+                    </span>
+                    <button
+                      onClick={() => setImage(null)}
+                      className="w-4 h-4 flex items-center justify-center rounded hover:opacity-70"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                {selectedFile && (
+                  <div
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border"
+                    style={{
+                      borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                      backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
+                    }}
+                  >
+                    <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
+                    <span className="font-mono text-xs truncate max-w-[120px]" style={{ color: "var(--theme-badge-text)" }}>
+                      {selectedFile.name}
+                    </span>
+                    <button
+                      onClick={() => setSelectedFile(null)}
+                      className="w-4 h-4 flex items-center justify-center rounded hover:opacity-70"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Selected file pill */}
-            {selectedFile && (
-              <div className="flex items-center gap-2 mb-2.5">
-                <span
-                  className="text-xs px-3 py-1 rounded-full flex items-center gap-1.5 border"
-                  style={{
-                    borderColor: `rgb(var(--theme-glow) / 0.3)`,
-                    backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
-                    color: "var(--theme-badge-text)",
-                  }}
-                >
-                  <FileText className="w-3 h-3" />
-                  {selectedFile.name}
-                  <button onClick={() => setSelectedFile(null)} className="ml-1 hover:opacity-60">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              </div>
-            )}
+            {/* Input row */}
+            <div className="flex items-end gap-2 px-3 py-3">
 
-            <div className="flex items-end gap-2">
-
-              {/* ── Attach button + popup menu ── */}
+              {/* Attach */}
               <div className="relative shrink-0" ref={attachMenuRef}>
-
-                {/* Hidden image file input */}
                 <input
                   ref={imageInputRef}
                   type="file"
@@ -676,22 +778,32 @@ const ChatPage = () => {
                   }}
                 />
 
-                {/* Attach menu popup */}
                 {showAttachMenu && (
                   <div
-                    className="absolute bottom-full left-0 mb-2 rounded-xl border shadow-xl overflow-hidden"
+                    className="attach-menu-enter absolute bottom-full left-0 mb-2 rounded-xl border shadow-2xl overflow-hidden"
                     style={{
-                      borderColor: `rgb(var(--theme-glow) / 0.2)`,
+                      borderColor: `rgb(var(--theme-glow) / 0.18)`,
                       backgroundColor: "var(--background)",
-                      minWidth: 190,
+                      minWidth: 200,
                     }}
                   >
-                    {/* Upload image option */}
+                    {/* Titlebar */}
+                    <div
+                      className="px-3 py-2 border-b font-mono text-[10px]"
+                      style={{
+                        borderColor: `rgb(var(--theme-glow) / 0.08)`,
+                        color: `rgb(var(--theme-glow) / 0.4)`,
+                        backgroundColor: `rgb(var(--theme-glow) / 0.02)`,
+                      }}
+                    >
+                      attach_file.sh
+                    </div>
+
                     <button
                       onClick={() => { imageInputRef.current?.click(); setShowAttachMenu(false); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground transition-all"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-muted-foreground transition-all"
                       onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.07)`;
                         (e.currentTarget as HTMLButtonElement).style.color = "var(--theme-badge-text)";
                       }}
                       onMouseLeave={(e) => {
@@ -700,31 +812,37 @@ const ChatPage = () => {
                       }}
                     >
                       <ImageIcon className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
-                      Upload image
+                      <span className="font-mono">upload_image</span>
                     </button>
 
-                    {/* Divider */}
-                    <div className="h-px mx-2" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
+                    <div className="h-px mx-3" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)` }} />
 
-                    {/* File library options */}
+                    {/* File section label */}
+                    <div
+                      className="px-3 pt-2 pb-1 font-mono text-[10px]"
+                      style={{ color: `rgb(var(--theme-glow) / 0.35)` }}
+                    >
+                      // library
+                    </div>
+
                     {loadingFiles ? (
-                      <div className="p-2 space-y-1">
+                      <div className="px-3 pb-2 space-y-1">
                         {[1, 2].map((i) => (
-                          <div key={i} className="h-8 rounded-lg animate-pulse"
-                            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)` }} />
+                          <div key={i} className="h-7 rounded-lg animate-pulse"
+                            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.05)` }} />
                         ))}
                       </div>
                     ) : storedFiles.length === 0 ? (
-                      <p className="text-xs text-muted-foreground/50 px-4 py-2.5">{t("chat.no_files")}</p>
+                      <p className="font-mono text-xs text-muted-foreground/40 px-3 pb-2.5">{t("chat.no_files")}</p>
                     ) : (
-                      <div className="max-h-40 overflow-y-auto">
+                      <div className="max-h-40 overflow-y-auto pb-1.5">
                         {storedFiles.map((file) => (
                           <button
                             key={file.id}
                             onClick={() => { setSelectedFile(file); setShowAttachMenu(false); }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground transition-all"
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-muted-foreground transition-all"
                             onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.07)`;
                               (e.currentTarget as HTMLButtonElement).style.color = "var(--theme-badge-text)";
                             }}
                             onMouseLeave={(e) => {
@@ -732,8 +850,8 @@ const ChatPage = () => {
                               (e.currentTarget as HTMLButtonElement).style.color = "";
                             }}
                           >
-                            <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
-                            <span className="truncate">{file.name}</span>
+                            <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: `rgb(var(--theme-glow) / 0.4)` }} />
+                            <span className="truncate font-mono">{file.name}</span>
                           </button>
                         ))}
                       </div>
@@ -741,23 +859,22 @@ const ChatPage = () => {
                   </div>
                 )}
 
-                {/* Paperclip button */}
                 <button
                   onClick={() => setShowAttachMenu((p) => !p)}
                   className="p-2 rounded-xl transition-all"
                   style={{ color: showAttachMenu ? "var(--theme-primary)" : "var(--muted-foreground)" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.1)`; }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
-                  title={t("chat.attach")}
                   disabled={loading || !activeSessionId}
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
               </div>
 
+              {/* Textarea */}
               <textarea
                 ref={textareaRef}
-                className="flex-1 resize-none bg-transparent rounded-xl px-2 py-2 text-sm outline-none min-h-[36px] max-h-[160px] placeholder:text-muted-foreground/50"
+                className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none min-h-[36px] max-h-[160px] placeholder:text-muted-foreground/35"
                 placeholder={activeSessionId ? t("chat.placeholder") : t("chat.placeholder_no_session")}
                 value={input}
                 onChange={handleInput}
@@ -766,19 +883,24 @@ const ChatPage = () => {
                 disabled={loading || !activeSessionId}
               />
 
+              {/* Send */}
               <button
                 onClick={() => handleSend()}
                 disabled={loading || (!input.trim() && !selectedFile && !image)}
-                className="p-2.5 rounded-xl shrink-0 transition-all disabled:opacity-30"
+                className="p-2.5 rounded-xl shrink-0 transition-all disabled:opacity-25"
                 style={{ background: "var(--theme-primary)", color: "#fff" }}
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-muted-foreground/40 mt-2 text-center">
+            {/* Disclaimer */}
+            <div
+              className="px-4 pb-2.5 font-mono text-[10px] text-center"
+              style={{ color: `rgb(var(--theme-glow) / 0.25)` }}
+            >
               {t("chat.disclaimer")}
-            </p>
+            </div>
           </div>
         </div>
       </div>

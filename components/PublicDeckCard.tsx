@@ -30,9 +30,7 @@ const PublicDeckCard = ({
 
   const handleStar = async () => {
     const result = await toggleStar(deck.id, starred);
-    if (result !== starred) {
-      setStarCount((p) => (result ? p + 1 : p - 1));
-    }
+    if (result !== starred) setStarCount((p) => (result ? p + 1 : p - 1));
     setStarred(result);
   };
 
@@ -41,10 +39,7 @@ const PublicDeckCard = ({
     setAdding(true);
     const { error } = await addPublicDeckToMyDecks(deck.id);
     setAdding(false);
-    if (error) {
-      onToast?.("Failed to add deck. Try again.", true);
-      return;
-    }
+    if (error) { onToast?.("Failed to add deck. Try again.", true); return; }
     onAdded?.(deck.id);
     onToast?.(`"${deck.title}" added to your decks!`);
   };
@@ -52,167 +47,153 @@ const PublicDeckCard = ({
   const timeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
     const days = Math.floor(diff / 86400000);
-    if (days === 0) return "Today";
-    if (days === 1) return "Yesterday";
-    if (days < 30) return `${days}d ago`;
+    if (days === 0) return "today";
+    if (days === 1) return "yesterday";
+    if (days < 30) return `${days}d_ago`;
     const months = Math.floor(days / 30);
-    if (months < 12) return `${months}mo ago`;
-    return `${Math.floor(months / 12)}y ago`;
+    if (months < 12) return `${months}mo_ago`;
+    return `${Math.floor(months / 12)}y_ago`;
   };
 
   return (
     <div
-      className="relative rounded-2xl border p-5 flex flex-col gap-4 transition-all duration-200"
+      className="relative rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
       style={{
-        borderColor: added
-          ? "rgb(34 197 94 / 0.3)"
-          : `rgb(var(--theme-glow) / 0.15)`,
-        backgroundColor: added
-          ? "rgb(34 197 94 / 0.03)"
-          : `rgb(var(--theme-glow) / 0.03)`,
-        opacity: added ? 0.7 : 1,
+        border: `1px solid ${added ? "rgb(34 197 94 / 0.25)" : `rgb(var(--theme-glow) / 0.15)`}`,
+        backgroundColor: `rgb(var(--theme-glow) / 0.02)`,
+        opacity: added ? 0.75 : 1,
       }}
     >
-      {/* Top row — title + star */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-black text-base truncate text-foreground">
-            {deck.title}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
-            {deck.description}
-          </p>
-        </div>
-
+      {/* Titlebar */}
+      <div
+        className="flex items-center gap-1.5 px-4 py-2 border-b"
+        style={{
+          borderColor: `rgb(var(--theme-glow) / 0.08)`,
+          backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
+        }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: added ? "#22c55e" : "var(--theme-primary)", opacity: 0.7 }} />
+        <span className="font-mono text-[9px] truncate flex-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+          {deck.title.toLowerCase().replace(/\s+/g, "_")}.deck
+        </span>
+        {/* Star button */}
         <button
           onClick={handleStar}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all hover:brightness-110 shrink-0"
+          className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold font-mono transition-all hover:brightness-110 shrink-0"
           style={{
-            borderColor: starred
-              ? "rgb(234 179 8 / 0.4)"
-              : `rgb(var(--theme-glow) / 0.2)`,
-            backgroundColor: starred
-              ? "rgb(234 179 8 / 0.08)"
-              : `rgb(var(--theme-glow) / 0.04)`,
-            color: starred ? "#eab308" : "var(--muted-foreground)",
+            backgroundColor: starred ? "rgb(234 179 8 / 0.1)" : `rgb(var(--theme-glow) / 0.06)`,
+            color: starred ? "#eab308" : `rgb(var(--theme-glow) / 0.4)`,
+            border: `1px solid ${starred ? "rgb(234 179 8 / 0.3)" : `rgb(var(--theme-glow) / 0.12)`}`,
           }}
         >
-          <Star
-            className="w-3.5 h-3.5"
-            fill={starred ? "#eab308" : "none"}
-            strokeWidth={starred ? 0 : 1.5}
-          />
+          <Star className="w-3 h-3" fill={starred ? "#eab308" : "none"} strokeWidth={starred ? 0 : 1.5} />
           {starCount}
         </button>
       </div>
 
-      {/* Meta row */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-        <span className="flex items-center gap-1">
-          <BookOpen className="w-3 h-3" />
-          {deck.card_count} cards
-        </span>
-        <span className="flex items-center gap-1">
-          <Plus className="w-3 h-3" />
-          {deck.add_count} added
-        </span>
-        <span>{timeAgo(deck.created_at)}</span>
-      </div>
+      <div className="p-4 flex flex-col gap-3 flex-1">
 
-      {/* Author */}
-      <Link
-        href={deck.username ? `/profile/${deck.username}` : "#"}
-        onClick={(e) => e.stopPropagation()}
-        className="flex items-center gap-2 w-fit transition-opacity hover:opacity-70"
-      >
-        <div
-          className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-black shrink-0"
-          style={{
-            backgroundColor: `rgb(var(--theme-glow) / 0.1)`,
-            color: "var(--theme-primary)",
-          }}
-        >
-          {deck.avatar_url ? (
-            <img
-              src={deck.avatar_url}
-              alt={deck.username ?? ""}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            (deck.username?.[0]?.toUpperCase() ?? "?")
+        {/* Title + description */}
+        <div className="space-y-1">
+          <h3 className="font-black text-base leading-tight text-foreground">{deck.title}</h3>
+          {deck.description && (
+            <p className="font-mono text-[10px] line-clamp-2 leading-relaxed" style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
+              // {deck.description}
+            </p>
           )}
         </div>
-        <span className="text-xs text-muted-foreground">
-          {deck.username ?? "Anonymous"}
-        </span>
-      </Link>
 
-      {/* Bottom actions */}
-      {isOwn ? (
-        onUnpublish || onDelete ? (
-          <div
-            className="flex gap-2 pt-4 border-t"
-            style={{ borderColor: `rgb(var(--theme-glow) / 0.1)` }}
-          >
-            <button
-              onClick={() => onUnpublish?.(deck.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border transition-all hover:brightness-110"
-              style={{
-                borderColor: `rgb(var(--theme-glow) / 0.2)`,
-                color: "var(--muted-foreground)",
-                backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-              }}
-            >
-              <EyeOff className="w-3.5 h-3.5" />
-              Make Private
-            </button>
-            <button
-              onClick={() => onDelete?.(deck.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border transition-all hover:brightness-110"
-              style={{
-                borderColor: "rgb(239 68 68 / 0.3)",
-                color: "#ef4444",
-                backgroundColor: "rgb(239 68 68 / 0.04)",
-              }}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
-            </button>
-          </div>
-        ) : (
-          <div
-            className="pt-3 border-t text-xs text-center text-muted-foreground/40"
-            style={{ borderColor: `rgb(var(--theme-glow) / 0.1)` }}
-          >
-            It's Your deck
-          </div>
-        )
-      ) : (
-        <button
-          onClick={handleAdd}
-          disabled={adding || added}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 disabled:opacity-60 border-t pt-3"
-          style={{
-            background: added ? "transparent" : "var(--theme-gradient)",
-            color: added ? "#22c55e" : "#fff",
-            textShadow: added ? "none" : "0 1px 3px rgba(0,0,0,0.3)",
-            borderColor: added ? "rgb(34 197 94 / 0.3)" : "transparent",
-            marginTop: "auto",
-          }}
+        {/* Meta */}
+        <div className="flex items-center gap-3 font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
+          <span className="flex items-center gap-1">
+            <BookOpen className="w-3 h-3" />
+            {deck.card_count}
+          </span>
+          <span className="flex items-center gap-1">
+            <Plus className="w-3 h-3" />
+            {deck.add_count}
+          </span>
+          <span>{timeAgo(deck.created_at)}</span>
+        </div>
+
+        {/* Author */}
+        <Link
+          href={deck.username ? `/profile/${deck.username}` : "#"}
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-2 w-fit transition-opacity hover:opacity-70"
         >
-          {added ? (
-            <>
-              <Check className="w-4 h-4" /> Added to your decks
-            </>
-          ) : adding ? (
-            "Adding..."
+          <div
+            className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-[9px] font-black shrink-0"
+            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)`, color: "var(--theme-primary)" }}
+          >
+            {deck.avatar_url ? (
+              <img src={deck.avatar_url} alt={deck.username ?? ""} className="w-full h-full object-cover" />
+            ) : (
+              deck.username?.[0]?.toUpperCase() ?? "?"
+            )}
+          </div>
+          <span className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.5)` }}>
+            @{deck.username ?? "anonymous"}
+          </span>
+        </Link>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Actions */}
+        {isOwn ? (
+          onUnpublish || onDelete ? (
+            <div className="flex gap-2 pt-3 border-t" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
+              <button
+                onClick={() => onUnpublish?.(deck.id)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold font-mono transition-all hover:brightness-110"
+                style={{
+                  border: `1px solid rgb(var(--theme-glow) / 0.15)`,
+                  color: `rgb(var(--theme-glow) / 0.5)`,
+                  backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
+                }}
+              >
+                <EyeOff className="w-3 h-3" />
+                unpublish
+              </button>
+              <button
+                onClick={() => onDelete?.(deck.id)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold font-mono transition-all hover:brightness-110"
+                style={{
+                  border: "1px solid rgb(239 68 68 / 0.25)",
+                  color: "#ef4444",
+                  backgroundColor: "rgb(239 68 68 / 0.04)",
+                }}
+              >
+                <Trash2 className="w-3 h-3" />
+                delete
+              </button>
+            </div>
           ) : (
-            <>
-              <Plus className="w-4 h-4" /> Add to My Decks
-            </>
-          )}
-        </button>
-      )}
+            <div className="pt-3 border-t font-mono text-[10px] text-center" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, color: `rgb(var(--theme-glow) / 0.3)` }}>
+              // your deck
+            </div>
+          )
+        ) : (
+          <button
+            onClick={handleAdd}
+            disabled={adding || added}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono transition-all hover:brightness-110 disabled:opacity-60 mt-1"
+            style={added
+              ? { backgroundColor: "rgb(34 197 94 / 0.08)", color: "#22c55e", border: "1px solid rgb(34 197 94 / 0.25)" }
+              : { background: "var(--theme-primary)", color: "#fff" }
+            }
+          >
+            {added ? (
+              <><Check className="w-3.5 h-3.5" /> added</>
+            ) : adding ? (
+              "$ adding..."
+            ) : (
+              <><Plus className="w-3.5 h-3.5" />add_to_decks</>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 };

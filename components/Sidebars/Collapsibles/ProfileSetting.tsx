@@ -20,10 +20,24 @@ const ProfileSetting = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [username, setUsername] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchUsername = () => {
     getProfile().then((profile) => {
       if (profile?.username) setUsername(profile.username);
     });
+  };
+
+  useEffect(() => {
+    fetchUsername();
+
+    // Re-fetch whenever SettingsPage fires "username-updated"
+    const handler = (e: Event) => {
+      const newUsername = (e as CustomEvent<string>).detail;
+      if (newUsername) setUsername(newUsername);
+      else fetchUsername();
+    };
+
+    window.addEventListener("username-updated", handler);
+    return () => window.removeEventListener("username-updated", handler);
   }, []);
 
   const items = [

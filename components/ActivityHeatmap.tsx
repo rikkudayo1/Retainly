@@ -3,21 +3,21 @@
 import { useMemo } from "react";
 
 interface ActivityHeatmapProps {
-  /** Record of "YYYY-MM-DD" -> activity count */
   data: Record<string, number>;
 }
 
-const DAYS_IN_YEAR = 365;
-const COLS = 53; // weeks
-const CELL = 11; // px per cell
-const GAP = 3;   // px gap
+const CELL = 11;
+const GAP = 3;
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAYS_LABEL = ["Mon", "Wed", "Fri"];
-const DAYS_LABEL_INDEX = [1, 3, 5]; // which row indices get a label
+const DAYS_LABEL_INDEX = [1, 3, 5];
 
 function toKey(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function getIntensity(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
@@ -30,61 +30,69 @@ function getIntensity(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
-  const { grid, monthLabels, totalDays, totalActiveDays, longestStreak } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const { grid, monthLabels, totalActiveDays, longestStreak, COLS } = useMemo(() => {
+    const year = new Date().getFullYear();
+    const jan1 = new Date(year, 0, 1);
+    const dec31 = new Date(year, 11, 31);
 
-    // Start from 364 days ago, aligned to Sunday
-    const start = new Date(today);
-    start.setDate(start.getDate() - DAYS_IN_YEAR + 1);
-    // Rewind to nearest Sunday
+    // Pad start to nearest Sunday before Jan 1
+    const start = new Date(jan1);
     start.setDate(start.getDate() - start.getDay());
 
-    const max = Math.max(1, ...Object.values(data));
+    // Pad end to nearest Saturday after Dec 31
+    const end = new Date(dec31);
+    end.setDate(end.getDate() + (6 - end.getDay()));
 
-    // Build a 7-row × 53-col grid
-    type Cell = { date: string; count: number; intensity: 0 | 1 | 2 | 3 | 4 } | null;
+    // Total columns (weeks)
+    const totalDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    const COLS = Math.ceil(totalDays / 7);
+
+    const max = Math.max(1, ...Object.values(data).map(Number));
+
+    type Cell = { date: string; count: number; intensity: 0 | 1 | 2 | 3 | 4; inYear: boolean } | null;
     const grid: Cell[][] = Array.from({ length: COLS }, () => Array(7).fill(null));
 
     const cursor = new Date(start);
     for (let col = 0; col < COLS; col++) {
       for (let row = 0; row < 7; row++) {
         const key = toKey(cursor);
-        const count = data[key] ?? 0;
+        const inYear = cursor >= jan1 && cursor <= dec31;
+        const count = inYear ? (Number(data[key]) || 0) : 0;
         grid[col][row] = {
           date: key,
           count,
-          intensity: getIntensity(count, max),
+          intensity: inYear ? getIntensity(count, max) : 0,
+          inYear,
         };
         cursor.setDate(cursor.getDate() + 1);
       }
     }
 
-    // Month label positions — find the first col where the month changes
+    // Month labels — first col where each month starts within the year
     const monthLabels: { col: number; label: string }[] = [];
     let lastMonth = -1;
     for (let col = 0; col < COLS; col++) {
-      const cell = grid[col][0];
-      if (!cell) continue;
-      const month = new Date(cell.date).getMonth();
-      if (month !== lastMonth) {
-        monthLabels.push({ col, label: MONTHS[month] });
-        lastMonth = month;
+      for (let row = 0; row < 7; row++) {
+        const cell = grid[col][row];
+        if (!cell || !cell.inYear) continue;
+        const month = new Date(cell.date).getMonth();
+        if (month !== lastMonth) {
+          monthLabels.push({ col, label: MONTHS[month] });
+          lastMonth = month;
+        }
+        break;
       }
     }
 
-    // Stats
-    const allDays = Object.entries(data).filter(([key]) => {
-      const d = new Date(key);
-      return d >= start && d <= today;
-    });
-    const totalActiveDays = allDays.filter(([, v]) => v > 0).length;
+    // Stats (only within this year)
+    const yearData = Object.entries(data).filter(([key]) => key.startsWith(`${year}-`));
+    const totalActiveDays = yearData.filter(([, v]) => Number(v) > 0).length;
 
     // Longest streak
     let longest = 0, current = 0;
     const sorted = Object.keys(data).sort();
-    for (let i = 0; i < sorted.length; i++) {
-      if (data[sorted[i]] > 0) {
+    for (const key of sorted) {
+      if (Number(data[key]) > 0) {
         current++;
         longest = Math.max(longest, current);
       } else {
@@ -92,7 +100,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       }
     }
 
-    return { grid, monthLabels, totalDays: DAYS_IN_YEAR, totalActiveDays, longestStreak: longest };
+    return { grid, monthLabels, totalActiveDays, longestStreak: longest, COLS };
   }, [data]);
 
   const totalWidth = COLS * (CELL + GAP);
@@ -111,7 +119,7 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
           className="text-sm font-bold uppercase tracking-widest"
           style={{ color: "var(--theme-badge-text)" }}
         >
-          Activity
+          Activity {new Date().getFullYear()}
         </h2>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span>
@@ -124,13 +132,17 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
       </div>
 
       {/* Heatmap scroll wrapper */}
-      <div className="overflow-x-auto pb-1">
+      <div
+        className="overflow-x-auto"
+        style={{
+          paddingBottom: 6,
+          scrollbarWidth: "thin",
+          scrollbarColor: `rgb(var(--theme-glow) / 0.35) rgb(var(--theme-glow) / 0.08)`,
+        } as React.CSSProperties}
+      >
         <div style={{ minWidth: totalWidth + 32 }}>
           {/* Month labels */}
-          <div
-            className="flex mb-1 pl-8"
-            style={{ gap: GAP }}
-          >
+          <div className="flex mb-1 pl-8" style={{ gap: GAP }}>
             {Array.from({ length: COLS }).map((_, col) => {
               const label = monthLabels.find((m) => m.col === col);
               return (
@@ -169,22 +181,17 @@ const ActivityHeatmap = ({ data }: ActivityHeatmapProps) => {
                 <div key={col} className="flex flex-col" style={{ gap: GAP }}>
                   {Array.from({ length: 7 }).map((_, row) => {
                     const cell = grid[col]?.[row];
-                    if (!cell) {
-                      return (
-                        <div
-                          key={row}
-                          style={{ width: CELL, height: CELL }}
-                        />
-                      );
-                    }
+                    if (!cell) return <div key={row} style={{ width: CELL, height: CELL }} />;
+
                     return (
                       <div
                         key={row}
-                        title={`${cell.date}: ${cell.count} activities`}
+                        title={cell.inYear ? `${cell.date}: ${cell.count} activities` : ""}
                         className="rounded-[2px] cursor-default transition-transform hover:scale-125"
                         style={{
                           width: CELL,
                           height: CELL,
+                          opacity: cell.inYear ? 1 : 0,
                           backgroundColor: cell.intensity === 0
                             ? `rgb(var(--theme-glow) / 0.08)`
                             : cell.intensity === 1

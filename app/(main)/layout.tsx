@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import AppPopupProvider from "@/components/AppPopupProvider";
+import { GemsProvider } from "@/context/GemsContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,21 +35,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html className="dark" lang="en">
+    <html suppressHydrationWarning className="dark" lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} ${notoSansThai.variable} font-sans antialiased`}>
-        <ThemeProvider>
-          <LanguageProvider>
-            <SidebarProvider>
-              <AppPopupProvider />
-              <AppSideBar />
-              <main className="flex-1 w-full">
-                <SidebarTrigger className="fixed left-2 top-4 z-40 h-7 w-7 rounded-lg border shadow-sm bg-background hover:bg-muted transition-colors" />
-                {children}
-              </main>
-            </SidebarProvider>
-            <ThemeToggle />
-          </LanguageProvider>
-        </ThemeProvider>
+        <GemsProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <SidebarProvider>
+                <AppPopupProvider />
+                <AppSideBar />
+                <main className="flex-1 w-full">
+                  <SidebarTrigger className="fixed left-2 top-4 z-40 h-7 w-7 rounded-lg border shadow-sm bg-background hover:bg-muted transition-colors" />
+                  {children}
+                </main>
+              </SidebarProvider>
+              <ThemeToggle />
+            </LanguageProvider>
+          </ThemeProvider>
+        </GemsProvider>
       </body>
     </html>
   );
