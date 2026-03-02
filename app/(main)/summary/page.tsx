@@ -13,6 +13,7 @@ import {
   Check,
   AlertCircle,
   Terminal,
+  Plus,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { getFiles, DBFile } from "@/lib/db";
@@ -54,12 +55,18 @@ const SummaryPage = () => {
   const fileMenuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    getFiles().then((data) => { setStoredFiles(data); setLoadingFiles(false); });
+    getFiles().then((data) => {
+      setStoredFiles(data);
+      setLoadingFiles(false);
+    });
   }, []);
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (fileMenuRef.current && !fileMenuRef.current.contains(e.target as Node))
+      if (
+        fileMenuRef.current &&
+        !fileMenuRef.current.contains(e.target as Node)
+      )
         setShowFileMenu(false);
     };
     if (showFileMenu) document.addEventListener("mousedown", handler);
@@ -83,18 +90,25 @@ const SummaryPage = () => {
         formData.append("imageBase64", image.base64);
         formData.append("imageMimeType", image.mimeType);
       } else {
-        const text = inputMode === "file" ? selectedFile!.text : pastedText.trim();
+        const text =
+          inputMode === "file" ? selectedFile!.text : pastedText.trim();
         formData.append("text", text);
       }
 
-      const res = await fetch("/api/generate", { method: "POST", body: formData });
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
       const data = await res.json();
 
       if (data.success) {
         setOutput(data.output);
         setActiveTab("summary");
         setTimeout(() => {
-          outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          outputRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
         }, 100);
       } else {
         setError(data.error || "Something went wrong.");
@@ -155,14 +169,16 @@ const SummaryPage = () => {
 
       <div className="min-h-screen bg-background text-foreground pb-24">
         <div className="max-w-2xl mx-auto px-5 pt-14 space-y-8">
-
           {/* ── Header ──────────────────────────────────── */}
           <div className="page-enter space-y-3">
             <div
               className="flex items-center gap-2 font-mono text-[11px]"
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
             >
-              <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
+              <Terminal
+                className="w-3 h-3"
+                style={{ color: "var(--theme-primary)" }}
+              />
               <span>~/retainly/summary</span>
             </div>
             <h1 className="text-5xl font-black tracking-tight leading-none">
@@ -184,13 +200,14 @@ const SummaryPage = () => {
           >
             {/* Terminal titlebar */}
             <div
-              className="flex items-center justify-between px-4 py-2.5 border-b"
+              className="border-b"
               style={{
                 borderColor: `rgb(var(--theme-glow) / 0.1)`,
                 backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
               }}
             >
-              <div className="flex items-center gap-1.5">
+              {/* Top row: dots + filename */}
+              <div className="flex items-center gap-1.5 px-4 py-2.5">
                 <span className="w-2 h-2 rounded-full bg-red-400/50" />
                 <span className="w-2 h-2 rounded-full bg-yellow-400/50" />
                 <span className="w-2 h-2 rounded-full bg-green-400/50" />
@@ -202,9 +219,44 @@ const SummaryPage = () => {
                 </span>
               </div>
 
-              {/* Mode toggle — inline in titlebar */}
+              {/* Mode toggle — full width on mobile, hidden on sm+ (shown inline via sm:hidden logic) */}
               <div
-                className="flex items-center rounded-lg border overflow-hidden"
+                className="flex sm:hidden border-t"
+                style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}
+              >
+                {(["file", "text"] as InputMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setInputMode(mode)}
+                    className="mode-tab flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-mono text-[10px] tracking-wide"
+                    style={{
+                      backgroundColor:
+                        inputMode === mode
+                          ? `rgb(var(--theme-glow) / 0.12)`
+                          : "transparent",
+                      color:
+                        inputMode === mode
+                          ? "var(--theme-badge-text)"
+                          : `rgb(var(--theme-glow) / 0.4)`,
+                      borderRight:
+                        mode === "file"
+                          ? `1px solid rgb(var(--theme-glow) / 0.1)`
+                          : "none",
+                    }}
+                  >
+                    {mode === "file" ? (
+                      <FileText className="w-3 h-3" />
+                    ) : (
+                      <Clipboard className="w-3 h-3" />
+                    )}
+                    {mode === "file" ? "from_file" : "paste_text"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mode toggle — inline on sm+ screens */}
+              <div
+                className="hidden sm:flex absolute top-0 right-0 mt-[9px] mr-4 items-center rounded-lg border overflow-hidden"
                 style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}
               >
                 {(["file", "text"] as InputMode[]).map((mode) => (
@@ -213,18 +265,25 @@ const SummaryPage = () => {
                     onClick={() => setInputMode(mode)}
                     className="mode-tab flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] tracking-wide"
                     style={{
-                      backgroundColor: inputMode === mode
-                        ? `rgb(var(--theme-glow) / 0.12)`
-                        : "transparent",
-                      color: inputMode === mode
-                        ? "var(--theme-badge-text)"
-                        : `rgb(var(--theme-glow) / 0.4)`,
-                      borderRight: mode === "file" ? `1px solid rgb(var(--theme-glow) / 0.1)` : "none",
+                      backgroundColor:
+                        inputMode === mode
+                          ? `rgb(var(--theme-glow) / 0.12)`
+                          : "transparent",
+                      color:
+                        inputMode === mode
+                          ? "var(--theme-badge-text)"
+                          : `rgb(var(--theme-glow) / 0.4)`,
+                      borderRight:
+                        mode === "file"
+                          ? `1px solid rgb(var(--theme-glow) / 0.1)`
+                          : "none",
                     }}
                   >
-                    {mode === "file"
-                      ? <FileText className="w-3 h-3" />
-                      : <Clipboard className="w-3 h-3" />}
+                    {mode === "file" ? (
+                      <FileText className="w-3 h-3" />
+                    ) : (
+                      <Clipboard className="w-3 h-3" />
+                    )}
                     {mode === "file" ? "from_file" : "paste_text"}
                   </button>
                 ))}
@@ -232,7 +291,6 @@ const SummaryPage = () => {
             </div>
 
             <div className="p-5 space-y-4">
-
               {/* ── File mode ── */}
               {inputMode === "file" && (
                 <div className="space-y-3">
@@ -252,13 +310,19 @@ const SummaryPage = () => {
                           ? "var(--theme-primary)"
                           : `rgb(var(--theme-glow) / 0.18)`,
                         backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
-                        color: selectedFile ? "var(--foreground)" : "var(--muted-foreground)",
+                        color: selectedFile
+                          ? "var(--foreground)"
+                          : "var(--muted-foreground)",
                       }}
                     >
                       <span className="flex items-center gap-2.5 truncate">
                         <FileText
                           className="w-4 h-4 shrink-0"
-                          style={{ color: selectedFile ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.35)` }}
+                          style={{
+                            color: selectedFile
+                              ? "var(--theme-primary)"
+                              : `rgb(var(--theme-glow) / 0.35)`,
+                          }}
                         />
                         <span className="truncate font-mono text-xs">
                           {selectedFile ? selectedFile.name : "choose_file..."}
@@ -267,7 +331,9 @@ const SummaryPage = () => {
                       <ChevronDown
                         className="w-4 h-4 shrink-0 transition-transform duration-200"
                         style={{
-                          transform: showFileMenu ? "rotate(180deg)" : "rotate(0deg)",
+                          transform: showFileMenu
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
                           color: `rgb(var(--theme-glow) / 0.4)`,
                         }}
                       />
@@ -297,12 +363,18 @@ const SummaryPage = () => {
                         {loadingFiles ? (
                           <div className="p-2.5 space-y-1.5">
                             {[1, 2].map((i) => (
-                              <div key={i} className="h-8 rounded-lg skeleton-pulse" />
+                              <div
+                                key={i}
+                                className="h-8 rounded-lg skeleton-pulse"
+                              />
                             ))}
                           </div>
                         ) : storedFiles.length === 0 ? (
                           <div className="px-4 py-5 text-center">
-                            <p className="font-mono text-xs" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                            <p
+                              className="font-mono text-xs"
+                              style={{ color: `rgb(var(--theme-glow) / 0.35)` }}
+                            >
                               // no files found
                             </p>
                           </div>
@@ -311,29 +383,47 @@ const SummaryPage = () => {
                             {storedFiles.map((file) => (
                               <button
                                 key={file.id}
-                                onClick={() => { setSelectedFile(file); setShowFileMenu(false); }}
+                                onClick={() => {
+                                  setSelectedFile(file);
+                                  setShowFileMenu(false);
+                                }}
                                 className="file-option w-full text-left font-mono text-xs px-3 py-2.5 rounded-lg flex items-center gap-2.5"
                                 style={{
-                                  backgroundColor: selectedFile?.id === file.id
-                                    ? `rgb(var(--theme-glow) / 0.1)`
-                                    : "transparent",
-                                  color: selectedFile?.id === file.id
-                                    ? "var(--theme-badge-text)"
-                                    : "var(--muted-foreground)",
+                                  backgroundColor:
+                                    selectedFile?.id === file.id
+                                      ? `rgb(var(--theme-glow) / 0.1)`
+                                      : "transparent",
+                                  color:
+                                    selectedFile?.id === file.id
+                                      ? "var(--theme-badge-text)"
+                                      : "var(--muted-foreground)",
                                 }}
                                 onMouseEnter={(e) => {
                                   if (selectedFile?.id !== file.id)
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.06)`;
+                                    (
+                                      e.currentTarget as HTMLButtonElement
+                                    ).style.backgroundColor =
+                                      `rgb(var(--theme-glow) / 0.06)`;
                                 }}
                                 onMouseLeave={(e) => {
                                   if (selectedFile?.id !== file.id)
-                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                                    (
+                                      e.currentTarget as HTMLButtonElement
+                                    ).style.backgroundColor = "transparent";
                                 }}
                               >
-                                <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: `rgb(var(--theme-glow) / 0.4)` }} />
+                                <FileText
+                                  className="w-3.5 h-3.5 shrink-0"
+                                  style={{
+                                    color: `rgb(var(--theme-glow) / 0.4)`,
+                                  }}
+                                />
                                 <span className="truncate">{file.name}</span>
                                 {selectedFile?.id === file.id && (
-                                  <Check className="w-3.5 h-3.5 ml-auto shrink-0" style={{ color: "var(--theme-primary)" }} />
+                                  <Check
+                                    className="w-3.5 h-3.5 ml-auto shrink-0"
+                                    style={{ color: "var(--theme-primary)" }}
+                                  />
                                 )}
                               </button>
                             ))}
@@ -354,8 +444,13 @@ const SummaryPage = () => {
                       }}
                     >
                       <span style={{ color: "var(--theme-primary)" }}>›</span>
-                      <span className="truncate flex-1">{selectedFile.name}</span>
-                      <button onClick={() => setSelectedFile(null)} className="shrink-0 hover:opacity-60 transition-opacity">
+                      <span className="truncate flex-1">
+                        {selectedFile.name}
+                      </span>
+                      <button
+                        onClick={() => setSelectedFile(null)}
+                        className="shrink-0 hover:opacity-60 transition-opacity"
+                      >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -405,9 +500,12 @@ const SummaryPage = () => {
                       style={{ color: `rgb(var(--theme-glow) / 0.3)` }}
                     >
                       {pastedText.trim().length} chars
-                      {pastedText.trim().length > 0 && pastedText.trim().length < 20 && (
-                        <span className="text-amber-500 ml-2">// too short</span>
-                      )}
+                      {pastedText.trim().length > 0 &&
+                        pastedText.trim().length < 20 && (
+                          <span className="text-amber-500 ml-2">
+                            // too short
+                          </span>
+                        )}
                     </span>
                   </div>
                 </div>
@@ -416,7 +514,9 @@ const SummaryPage = () => {
               {/* ── Image attachment ── */}
               <ImageAttachment
                 selectedImage={image}
-                onImageSelect={(base64, mimeType, name) => setImage({ base64, mimeType, name })}
+                onImageSelect={(base64, mimeType, name) =>
+                  setImage({ base64, mimeType, name })
+                }
                 onImageClear={() => setImage(null)}
                 disabled={loading}
               />
@@ -425,9 +525,11 @@ const SummaryPage = () => {
               <button
                 onClick={handleGenerate}
                 disabled={!canGenerate}
-                className="w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-35"
+                className="w-full py-3 rounded-[3px] text-sm font-mono transition-all flex items-center justify-center gap-2 disabled:opacity-35"
                 style={{
-                  background: canGenerate ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.08)`,
+                  background: canGenerate
+                    ? "var(--theme-primary)"
+                    : `rgb(var(--theme-glow) / 0.08)`,
                   color: canGenerate ? "#fff" : "var(--muted-foreground)",
                 }}
               >
@@ -438,7 +540,7 @@ const SummaryPage = () => {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
+                    <Plus className="w-4 h-4" />
                     Generate Summary
                   </>
                 )}
@@ -458,7 +560,9 @@ const SummaryPage = () => {
             >
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               <div>
-                <span style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// error: </span>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
+                  // error:{" "}
+                </span>
                 {error}
               </div>
             </div>
@@ -471,7 +575,10 @@ const SummaryPage = () => {
                 className="flex items-center gap-2 font-mono text-[11px]"
                 style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
               >
-                <Loader2 className="w-3 h-3 animate-spin" style={{ color: "var(--theme-primary)" }} />
+                <Loader2
+                  className="w-3 h-3 animate-spin"
+                  style={{ color: "var(--theme-primary)" }}
+                />
                 <span>processing input...</span>
               </div>
               <div className="space-y-3">
@@ -492,7 +599,10 @@ const SummaryPage = () => {
                   <div
                     key={i}
                     className="h-3 rounded-full skeleton-pulse"
-                    style={{ width: `${w}%`, animationDelay: `${(i + 5) * 100}ms` }}
+                    style={{
+                      width: `${w}%`,
+                      animationDelay: `${(i + 5) * 100}ms`,
+                    }}
                   />
                 ))}
               </div>
@@ -502,7 +612,6 @@ const SummaryPage = () => {
           {/* ── Output ──────────────────────────────────── */}
           {output && !loading && (
             <div ref={outputRef} className="space-y-5 page-enter">
-
               {/* Output section rule */}
               <div className="flex items-center gap-4">
                 <span
@@ -511,7 +620,10 @@ const SummaryPage = () => {
                 >
                   // OUTPUT
                 </span>
-                <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
+                <div
+                  className="flex-1 h-px"
+                  style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }}
+                />
                 {selectedFile?.name && (
                   <span
                     className="font-mono text-[10px] shrink-0"
@@ -528,12 +640,16 @@ const SummaryPage = () => {
                     color: `rgb(var(--theme-glow) / 0.4)`,
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = `rgb(var(--theme-glow) / 0.3)`;
-                    (e.currentTarget as HTMLButtonElement).style.color = "var(--theme-badge-text)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor =
+                      `rgb(var(--theme-glow) / 0.3)`;
+                    (e.currentTarget as HTMLButtonElement).style.color =
+                      "var(--theme-badge-text)";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = `rgb(var(--theme-glow) / 0.15)`;
-                    (e.currentTarget as HTMLButtonElement).style.color = `rgb(var(--theme-glow) / 0.4)`;
+                    (e.currentTarget as HTMLButtonElement).style.borderColor =
+                      `rgb(var(--theme-glow) / 0.15)`;
+                    (e.currentTarget as HTMLButtonElement).style.color =
+                      `rgb(var(--theme-glow) / 0.4)`;
                   }}
                 >
                   <X className="w-3 h-3" /> clear
@@ -546,24 +662,38 @@ const SummaryPage = () => {
                 style={{ borderColor: `rgb(var(--theme-glow) / 0.12)` }}
               >
                 {[
-                  { id: "summary" as ActiveTab, label: "summary", icon: <BookOpen className="w-3.5 h-3.5" /> },
-                  { id: "concepts" as ActiveTab, label: "key_concepts", icon: <Lightbulb className="w-3.5 h-3.5" /> },
+                  {
+                    id: "summary" as ActiveTab,
+                    label: "summary",
+                    icon: <BookOpen className="w-3.5 h-3.5" />,
+                  },
+                  {
+                    id: "concepts" as ActiveTab,
+                    label: "key_concepts",
+                    icon: <Lightbulb className="w-3.5 h-3.5" />,
+                  },
                 ].map((tab, i) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className="output-tab flex-1 flex items-center justify-center gap-2 py-2.5 font-mono text-xs"
                     style={{
-                      backgroundColor: activeTab === tab.id
-                        ? `rgb(var(--theme-glow) / 0.08)`
-                        : "transparent",
-                      color: activeTab === tab.id
-                        ? "var(--theme-badge-text)"
-                        : `rgb(var(--theme-glow) / 0.4)`,
-                      borderRight: i === 0 ? `1px solid rgb(var(--theme-glow) / 0.1)` : "none",
-                      borderBottom: activeTab === tab.id
-                        ? `2px solid var(--theme-primary)`
-                        : "2px solid transparent",
+                      backgroundColor:
+                        activeTab === tab.id
+                          ? `rgb(var(--theme-glow) / 0.08)`
+                          : "transparent",
+                      color:
+                        activeTab === tab.id
+                          ? "var(--theme-badge-text)"
+                          : `rgb(var(--theme-glow) / 0.4)`,
+                      borderRight:
+                        i === 0
+                          ? `1px solid rgb(var(--theme-glow) / 0.1)`
+                          : "none",
+                      borderBottom:
+                        activeTab === tab.id
+                          ? `2px solid var(--theme-primary)`
+                          : "2px solid transparent",
                     }}
                   >
                     {tab.icon}
@@ -608,7 +738,9 @@ const SummaryPage = () => {
 
                       <div
                         className="w-px self-stretch"
-                        style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }}
+                        style={{
+                          backgroundColor: `rgb(var(--theme-glow) / 0.1)`,
+                        }}
                       />
 
                       <div className="space-y-1 min-w-0">
@@ -628,7 +760,6 @@ const SummaryPage = () => {
               )}
             </div>
           )}
-
         </div>
       </div>
     </>

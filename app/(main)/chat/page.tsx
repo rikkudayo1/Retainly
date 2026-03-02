@@ -654,7 +654,7 @@ const ChatPage = () => {
               </div>
               <button
                 onClick={() => setShowNewChatModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold font-mono transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-[3px] text-sm font-bold font-mono transition-all"
                 style={{ background: "var(--theme-primary)", color: "#fff" }}
               >
                 <Plus className="w-4 h-4" /> {t("chat.new")}
@@ -700,10 +700,11 @@ const ChatPage = () => {
         {/* ── Input area ────────────────────────────────── */}
         <div className="px-4 sm:px-6 pb-5 pt-2 shrink-0">
           <div
-            className="rounded-2xl border overflow-hidden"
+            className="rounded-2xl border"
             style={{
               borderColor: `rgb(var(--theme-glow) / 0.18)`,
               backgroundColor: `rgb(var(--theme-glow) / 0.025)`,
+              overflow: "visible",
             }}
           >
             {/* Attachment previews */}

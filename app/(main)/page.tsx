@@ -211,7 +211,7 @@ const HomePage = () => {
               <span>{t("home.badge")}</span>
             </div>
 
-            <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-[0.95] mb-8">
+            <h1 className="text-6xl sm:text-4xl md:text-8xl font-black tracking-tight leading-[0.95] mb-8">
               <span
                 className="block transition-all duration-300"
                 style={{
@@ -233,7 +233,7 @@ const HomePage = () => {
             <div className="flex items-center gap-3">
               <Button
                 size="lg"
-                className="rounded-lg px-7 font-semibold hover:opacity-90 transition-opacity"
+                className="px-7 font-mono rounded-[3px] hover:opacity-90 transition-opacity"
                 style={{
                   background: "var(--theme-primary)",
                   color: "#fff",

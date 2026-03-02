@@ -263,7 +263,7 @@ const BrowsePage = () => {
           {/* ── Search + Sort ───────────────────────────── */}
           <div className="page-enter stagger-1 mb-8" style={{ isolation: "isolate", position: "relative", zIndex: 50 }}>
             <SectionRule label="// 01  SEARCH & FILTER" />
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
 
               {/* Search input with terminal chrome */}
               <div
@@ -312,10 +312,10 @@ const BrowsePage = () => {
               </div>
 
               {/* Sort dropdown */}
-              <div ref={sortMenuRef} className="relative shrink-0" style={{ zIndex: 100 }}>
+              <div ref={sortMenuRef} className="relative shrink-0 sm:shrink" style={{ zIndex: 100 }}>
                 <button
                   onClick={() => setShowSortMenu((p) => !p)}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border transition-all font-mono"
+                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border transition-all font-mono w-full sm:w-auto"
                   style={{
                     borderColor: showSortMenu ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.2)`,
                     backgroundColor: showSortMenu ? `rgb(var(--theme-glow) / 0.06)` : `rgb(var(--theme-glow) / 0.04)`,

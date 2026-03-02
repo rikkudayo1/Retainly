@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LayersIcon, LayoutGrid, FileText, ChevronDown, Sparkles } from "lucide-react";
+import { LayersIcon, LayoutGrid, FileText, ChevronDown, Sparkles, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { getFiles, getDecks, saveDeck, DBFile, logActivity } from "@/lib/db";
@@ -413,7 +413,7 @@ const FlashcardsPage = () => {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="generate-btn w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+              className="generate-btn w-full py-3.5 rounded-{3px} font-semibold text-sm flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -427,10 +427,10 @@ const FlashcardsPage = () => {
                   </span>
                 </>
               ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
+                <div className="flex items-center font-mono gap-3">
+                  <Plus className="w-4 h-4" />
                   {t("flash.generate")}
-                </>
+                </div>
               )}
             </button>
 
@@ -438,7 +438,7 @@ const FlashcardsPage = () => {
             {deckCount > 0 && (
               <button
                 onClick={() => router.push("/flashcards/decks")}
-                className="decks-btn w-full mt-3 text-sm flex items-center justify-center gap-2 py-3 rounded-xl border text-muted-foreground font-mono"
+                className="decks-btn w-full mt-3 text-sm flex items-center justify-center gap-2 py-3 rounded-[3px] border text-muted-foreground font-mono"
                 style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}
               >
                 <LayersIcon className="w-4 h-4" style={{ color: "var(--theme-primary)" }} />

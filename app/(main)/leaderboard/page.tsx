@@ -109,7 +109,7 @@ const LeaderboardPage = () => {
             {/* My rank badge */}
             {myRank && myRank > 0 && (
               <div
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[3px] border font-mono text-xs"
                 style={{
                   borderColor: `rgb(var(--theme-glow) / 0.2)`,
                   backgroundColor: `rgb(var(--theme-glow) / 0.05)`,
@@ -129,7 +129,7 @@ const LeaderboardPage = () => {
 
           {/* ── Tab toggle ──────────────────────────────── */}
           <div
-            className="page-enter flex border rounded-xl overflow-hidden mb-8"
+            className="page-enter flex border rounded-[3px] overflow-hidden mb-8"
             style={{
               animationDelay: "40ms",
               borderColor: `rgb(var(--theme-glow) / 0.12)`,

@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { MessageCircle, ArrowRight, ChevronRight, Text, CircleHelp, UploadCloud, BookOpen, ChartBar } from "lucide-react";
+import { ArrowRight, ChevronRight, PlusCircle, BadgeQuestionMark, Upload, Search } from "lucide-react";
 import Link from "next/link";
 
 const hoverStyle = (e: React.MouseEvent<HTMLElement>, enter: boolean) => {
@@ -16,13 +16,13 @@ const hoverStyle = (e: React.MouseEvent<HTMLElement>, enter: boolean) => {
 };
 
 const items = [
-  { href: "/upload", icon: <UploadCloud size={16} />, label: "Upload" },
-  { href: "/chat", icon: <MessageCircle size={16} />, label: "Study Assistant" },
-  { href: "/summary", icon: <Text size={16} />, label: "Summary" },
-  { href: "/leaderboard", icon: <ChartBar size={16} />, label: "Leaderboard" },
+  { href: "/quizzes/generate", icon: <PlusCircle size={16} />, label: "Create" },
+  { href: "/quizzes", icon: <BadgeQuestionMark size={16} />, label: "Your Quizzes" },
+  { href: "/quizzes/browse", icon: <Search size={16} />, label: "Public Quizzes" },
+  { href: "/quizzes/publish", icon: <Upload size={16} />, label: "Publish" },
 ];
 
-const Main = () => {
+const Quiz = () => {
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
@@ -34,8 +34,8 @@ const Main = () => {
           onMouseLeave={(e) => hoverStyle(e, false)}
         >
           <div className="flex items-center gap-2.5">
-            <BookOpen size={16} />
-            <span>Main</span>
+            <BadgeQuestionMark size={16} />
+            <span>Quizzes</span>
           </div>
           <ChevronRight
             size={14}
@@ -70,4 +70,4 @@ const Main = () => {
   );
 };
 
-export default Main;
+export default Quiz;

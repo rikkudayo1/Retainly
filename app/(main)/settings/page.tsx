@@ -282,7 +282,7 @@ const SettingsPage = () => {
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-35 flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-[3px] font-bold font-mono text-sm transition-all disabled:opacity-35 flex items-center justify-center gap-2"
                 style={
                   saved
                     ? { backgroundColor: "rgb(34 197 94 / 0.1)", color: "#22c55e", border: "1px solid rgb(34 197 94 / 0.25)" }

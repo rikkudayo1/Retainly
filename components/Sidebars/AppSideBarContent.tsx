@@ -4,6 +4,7 @@ import { SidebarContent, SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
 import Main from "./Collapsibles/Main";
 import Generate from "./Collapsibles/Generate";
 import Gacha from "./Collapsibles/Gacha";
+import Quiz from "./Collapsibles/Quiz";
 import Link from "next/link";
 import Settings from "./Collapsibles/ProfileSetting";
 import { HomeIcon } from "lucide-react";
@@ -33,6 +34,7 @@ const AppSideBarContent = () => {
         </Link>
         <div className="mt-2 space-y-1">
           <Main />
+          <Quiz />
           <Generate />
           <Gacha />
           <Settings />

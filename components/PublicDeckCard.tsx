@@ -178,7 +178,7 @@ const PublicDeckCard = ({
           <button
             onClick={handleAdd}
             disabled={adding || added}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono transition-all hover:brightness-110 disabled:opacity-60 mt-1"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[3px] text-xs font-bold font-mono transition-all hover:brightness-110 disabled:opacity-60 mt-1"
             style={added
               ? { backgroundColor: "rgb(34 197 94 / 0.08)", color: "#22c55e", border: "1px solid rgb(34 197 94 / 0.25)" }
               : { background: "var(--theme-primary)", color: "#fff" }

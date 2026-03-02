@@ -431,7 +431,7 @@ const PublishPage = () => {
                 <button
                   onClick={handlePublish}
                   disabled={publishing}
-                  className="publish-btn w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+                  className="publish-btn w-full py-3.5 rounded-[3px] font-mono text-sm flex items-center justify-center gap-2"
                 >
                   {publishing ? (
                     <>
