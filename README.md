@@ -15,6 +15,7 @@ Retainly is an AI-powered study assistant designed to enhance learning and infor
 
 -   **Community & Gamification**:
     -   **Public Decks**: Publish your flashcard decks and browse a library of decks shared by the community.
+    -   **Public Quizzes**: Publish your quizzes and browse a quiz shared by the community.
     -   **Leaderboard**: Compete on weekly and all-time leaderboards by earning points from study activities.
     -   **Daily Streaks & Rewards**: Maintain a daily login streak and claim gem rewards.
     -   **Gacha System**: Spend your earned gems to unlock new UI themes and personalize your experience.

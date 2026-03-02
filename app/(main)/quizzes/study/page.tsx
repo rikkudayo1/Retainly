@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   CheckCircle, XCircle, Trophy, Brain,
@@ -31,7 +31,7 @@ const SectionRule = ({ label }: { label: string }) => (
   </div>
 );
 
-const QuizStudyPage = () => {
+const QuizStudyPageInner  = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { addGems } = useGemsContext();
@@ -458,5 +458,16 @@ const QuizStudyPage = () => {
     );
   }
 };
+
+const QuizStudyPage = () => (
+  <Suspense fallback={
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+        style={{ borderColor: "var(--theme-primary)", borderTopColor: "transparent" }} />
+    </div>
+  }>
+    <QuizStudyPageInner />
+  </Suspense>
+);
 
 export default QuizStudyPage;
