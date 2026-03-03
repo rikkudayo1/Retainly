@@ -1,15 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   CheckCircle, XCircle, Trophy, Brain,
   Zap, Terminal, ArrowRight, Gem,
 } from "lucide-react";
-import { getQuizSession, saveQuizSession, QuizQuestion, DBQuizSession } from "@/lib/db";
+import { getQuiz, saveQuizScore, Quiz, QuizQuestion } from "@/lib/db";
 import { useGemsContext } from "@/context/GemsContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { createClient } from "@/lib/supabase";
 
 const CHOICE_LABELS = ["A", "B", "C", "D"];
 
@@ -31,16 +30,15 @@ const SectionRule = ({ label }: { label: string }) => (
   </div>
 );
 
-const QuizStudyPageInner  = () => {
-  const searchParams = useSearchParams();
+const QuizStudyPage = () => {
+  // Route: /quizzes/study/[id]  — [id] is the QUIZ id (not an attempt id)
+  const { id: quizId } = useParams<{ id: string }>();
   const router = useRouter();
   const { addGems } = useGemsContext();
   const { t } = useLanguage();
 
-  const sessionId = searchParams.get("id");
-
   const [pageState, setPageState] = useState<PageState>("loading");
-  const [session, setSession] = useState<DBQuizSession | null>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<QuizResult[]>([]);
@@ -53,18 +51,18 @@ const QuizStudyPageInner  = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!sessionId) { setPageState("notfound"); return; }
-    getQuizSession(sessionId).then((data) => {
+    if (!quizId) { setPageState("notfound"); return; }
+    getQuiz(quizId).then((data) => {
       if (!data || !data.questions?.length) { setPageState("notfound"); return; }
-      setSession(data);
+      setQuiz(data);
       setQuestions(data.questions);
       setPageState("quiz");
     });
-  }, [sessionId]);
+  }, [quizId]);
 
   const handleAnswer = (choice: string) => {
     if (answered) return;
-    const isCorrect = choice.startsWith(questions[currentIndex].answer);
+    const isCorrect = choice === questions[currentIndex].answer;
     setSelectedAnswer(choice);
     setAnswered(true);
     if (isCorrect) setCorrect((p) => p + 1);
@@ -73,26 +71,41 @@ const QuizStudyPageInner  = () => {
   };
 
   const handleNext = async () => {
-    if (currentIndex + 1 >= questions.length) {
-      // Save updated score
-      const newCorrect = results.filter((r) => r.correct).length + (results.length === questions.length - 1 ? (results[results.length - 1]?.correct ? 0 : 0) : 0);
-      const finalCorrect = correct;
+    const isLastQuestion = currentIndex + 1 >= questions.length;
 
-      const wrongQ = results.filter((r) => !r.correct).map((r) => questions[r.questionIndex].question);
-      setWeakness(wrongQ.length === 0 ? t("quiz.perfect") : wrongQ.map((q, i) => `${i + 1}) ${q}`).join(" | "));
+    if (isLastQuestion) {
+      const lastResult: QuizResult = {
+        questionIndex: currentIndex,
+        selected: selectedAnswer!,
+        correct: selectedAnswer === questions[currentIndex].answer,
+      };
+      const allResults = [
+        ...results.filter((r) => r.questionIndex !== currentIndex),
+        lastResult,
+      ];
+      const finalCorrect = allResults.filter((r) => r.correct).length;
+      const finalWrong = allResults.length - finalCorrect;
+
+      const wrongQuestions = allResults
+        .filter((r) => !r.correct)
+        .map((r) => questions[r.questionIndex].question);
+
+      setWeakness(
+        wrongQuestions.length === 0
+          ? t("quiz.perfect")
+          : wrongQuestions.map((q, i) => `${i + 1}) ${q}`).join(" | ")
+      );
+
+      setCorrect(finalCorrect);
+      setWrong(finalWrong);
 
       const earned = finalCorrect * 10;
       addGems(earned);
       setGemsEarned(earned);
 
-      // Update score on existing session
-      if (session) {
+      if (quiz) {
         setSaving(true);
-        const supabase = createClient();
-        await supabase
-          .from("quiz_sessions")
-          .update({ score: finalCorrect, total: questions.length })
-          .eq("id", session.id);
+        await saveQuizScore(quiz.id, finalCorrect);
         setSaving(false);
       }
 
@@ -118,10 +131,8 @@ const QuizStudyPageInner  = () => {
 
   const getChoiceState = (choice: string, q: QuizQuestion): "correct" | "wrong" | "dim" | "idle" => {
     if (!answered) return "idle";
-    const isCorrect = choice === q.answer || choice.startsWith(q.answer);
-    const isSelected = choice === selectedAnswer;
-    if (isCorrect) return "correct";
-    if (isSelected && !isCorrect) return "wrong";
+    if (choice === q.answer) return "correct";
+    if (choice === selectedAnswer) return "wrong";
     return "dim";
   };
 
@@ -153,28 +164,21 @@ const QuizStudyPageInner  = () => {
     return (
       <>
         <style>{`
-          @keyframes choiceIn {
-            from { opacity: 0; transform: translateX(-6px); }
-            to   { opacity: 1; transform: translateX(0); }
-          }
-          @keyframes explanationIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
+          @keyframes choiceIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+          @keyframes explanationIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
           .choice-enter { animation: choiceIn 0.2s cubic-bezier(0.22,1,0.36,1) forwards; }
           .explanation-enter { animation: explanationIn 0.25s cubic-bezier(0.22,1,0.36,1) forwards; }
         `}</style>
 
         <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
           <div className="w-full max-w-xl space-y-6">
-
             {/* Top bar */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 font-mono text-[11px]"
                   style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
                   <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-                  <span className="truncate max-w-[160px]">{session?.title}</span>
+                  <span className="truncate max-w-[160px]">{quiz?.title}</span>
                 </div>
                 <div className="flex items-center gap-3 font-mono text-xs">
                   <span className="flex items-center gap-1.5">
@@ -228,18 +232,9 @@ const QuizStudyPageInner  = () => {
                     className="choice-enter w-full text-left px-4 py-3.5 rounded-xl border text-sm font-medium transition-all duration-150 flex items-center gap-3"
                     style={{
                       animationDelay: `${i * 50}ms`,
-                      borderColor: state === "correct" ? "#22c55e"
-                        : state === "wrong" ? "#ef4444"
-                        : state === "dim" ? `rgb(var(--theme-glow) / 0.08)`
-                        : `rgb(var(--theme-glow) / 0.18)`,
-                      backgroundColor: state === "correct" ? "rgb(34 197 94 / 0.07)"
-                        : state === "wrong" ? "rgb(239 68 68 / 0.07)"
-                        : state === "dim" ? `rgb(var(--theme-glow) / 0.01)`
-                        : `rgb(var(--theme-glow) / 0.02)`,
-                      color: state === "correct" ? "#22c55e"
-                        : state === "wrong" ? "#ef4444"
-                        : state === "dim" ? `rgb(var(--theme-glow) / 0.3)`
-                        : "var(--foreground)",
+                      borderColor: state === "correct" ? "#22c55e" : state === "wrong" ? "#ef4444" : state === "dim" ? `rgb(var(--theme-glow) / 0.08)` : `rgb(var(--theme-glow) / 0.18)`,
+                      backgroundColor: state === "correct" ? "rgb(34 197 94 / 0.07)" : state === "wrong" ? "rgb(239 68 68 / 0.07)" : state === "dim" ? `rgb(var(--theme-glow) / 0.01)` : `rgb(var(--theme-glow) / 0.02)`,
+                      color: state === "correct" ? "#22c55e" : state === "wrong" ? "#ef4444" : state === "dim" ? `rgb(var(--theme-glow) / 0.3)` : "var(--foreground)",
                       opacity: state === "dim" ? 0.5 : 1,
                       cursor: answered ? "default" : "pointer",
                     }}
@@ -289,11 +284,9 @@ const QuizStudyPageInner  = () => {
                   className="w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 hover:opacity-90"
                   style={{ background: "var(--theme-primary)", color: "#fff" }}
                 >
-                  {currentIndex + 1 >= questions.length ? (
-                    saving ? "saving..." : <><Trophy className="w-4 h-4" /> {t("quiz.results")}</>
-                  ) : (
-                    <>{t("quiz.next")} <ArrowRight className="w-4 h-4" /></>
-                  )}
+                  {currentIndex + 1 >= questions.length
+                    ? saving ? "saving..." : <><Trophy className="w-4 h-4" /> {t("quiz.results")}</>
+                    : <>{t("quiz.next")} <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
             )}
@@ -321,8 +314,6 @@ const QuizStudyPageInner  = () => {
 
         <div className="min-h-screen bg-background text-foreground">
           <div className="max-w-2xl mx-auto px-5 pt-14 pb-24 space-y-10">
-
-            {/* Score hero */}
             <div className="page-enter space-y-2">
               <div className="flex items-center gap-2 font-mono text-[11px] mb-5"
                 style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
@@ -335,7 +326,7 @@ const QuizStudyPageInner  = () => {
                 <div className="flex items-center justify-between px-4 py-2.5 border-b"
                   style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}>
                   <span className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-                    // session_complete · {session?.title}
+                    // session_complete · {quiz?.title}
                   </span>
                   {isPerfect && (
                     <span className="font-mono text-[10px]" style={{ color: "#22c55e" }}>✓ perfect_score</span>
@@ -407,10 +398,11 @@ const QuizStudyPageInner  = () => {
                       </div>
                       <div className="p-3 space-y-1">
                         {q.choices.map((choice, ci) => {
-                          const isCorrectChoice = choice.startsWith(q.answer);
+                          const isCorrectChoice = choice === q.answer;
                           const isSelectedChoice = result?.selected === choice;
                           return (
-                            <div key={ci} className="flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg font-mono"
+                            <div key={ci}
+                              className="flex items-center gap-2.5 text-xs px-3 py-2 rounded-lg font-mono"
                               style={{
                                 backgroundColor: isCorrectChoice ? "rgb(34 197 94 / 0.08)" : isSelectedChoice ? "rgb(239 68 68 / 0.08)" : "transparent",
                                 color: isCorrectChoice ? "#22c55e" : isSelectedChoice ? "#ef4444" : `rgb(var(--theme-glow) / 0.35)`,
@@ -457,17 +449,8 @@ const QuizStudyPageInner  = () => {
       </>
     );
   }
-};
 
-const QuizStudyPage = () => (
-  <Suspense fallback={
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-        style={{ borderColor: "var(--theme-primary)", borderTopColor: "transparent" }} />
-    </div>
-  }>
-    <QuizStudyPageInner />
-  </Suspense>
-);
+  return null;
+};
 
 export default QuizStudyPage;

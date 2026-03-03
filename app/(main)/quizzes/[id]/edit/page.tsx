@@ -1,67 +1,74 @@
 "use client";
 
+import { createClient } from "@/lib/supabase";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Terminal, ArrowLeft, Plus, Trash2, Check, X,
-  ChevronDown, Loader2, Pencil, Globe,
+  ChevronDown, Loader2, Pencil, Globe, EyeOff, AlertCircle,
 } from "lucide-react";
 import {
-  getQuizSession,
-  updateQuizTitle,
-  updateQuizQuestion,
-  deleteQuizQuestion,
-  addQuizQuestion,
-  publishQuiz,
-  unpublishQuiz,
-  DBQuizSession,
-  QuizQuestion,
+  getQuiz, updateQuiz, deleteQuiz, publishQuiz, unpublishQuiz,
+  createQuiz, Quiz, QuizQuestion,
 } from "@/lib/db";
 
 const CHOICE_LABELS = ["A", "B", "C", "D"];
 
+const answerTextToLabel = (answerText: string, choices: string[]): string => {
+  const idx = choices.indexOf(answerText);
+  return idx !== -1 ? CHOICE_LABELS[idx] : "A";
+};
+
 const SectionRule = ({ label }: { label: string }) => (
   <div className="flex items-center gap-4 mb-6">
     <span className="text-[10px] font-mono tracking-[0.2em] shrink-0"
-      style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-      {label}
-    </span>
+      style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{label}</span>
     <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
   </div>
 );
 
-// ─── Question row ─────────────────────────────────────────────
 const QuestionRow = ({
   question, index, onSave, onDelete,
 }: {
   question: QuizQuestion;
   index: number;
-  onSave: (index: number, data: Partial<QuizQuestion>) => Promise<void>;
-  onDelete: (index: number) => Promise<void>;
+  onSave: (index: number, data: Partial<QuizQuestion>) => Promise<string | null>;
+  onDelete: (index: number) => Promise<string | null>;
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [qText, setQText] = useState(question.question);
   const [choices, setChoices] = useState<string[]>([...question.choices]);
-  const [answer, setAnswer] = useState(question.answer);
+  const [answerLabel, setAnswerLabel] = useState(
+    answerTextToLabel(question.answer, question.choices)
+  );
   const [explanation, setExplanation] = useState(question.explanation ?? "");
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [rowError, setRowError] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const currentAnswerText = choices[CHOICE_LABELS.indexOf(answerLabel)] ?? "";
   const isDirty =
     qText !== question.question ||
     explanation !== (question.explanation ?? "") ||
-    answer !== question.answer ||
+    currentAnswerText !== question.answer ||
     choices.some((c, i) => c !== question.choices[i]);
 
   const handleSave = async () => {
     if (!qText.trim()) return;
     setSaving(true);
-    const answerIndex = CHOICE_LABELS.indexOf(answer);
-    const answerText = choices[answerIndex] ?? answer;
-    await onSave(index, { question: qText.trim(), choices, answer: answerText, explanation: explanation.trim() });
+    setRowError("");
+    const answerIndex = CHOICE_LABELS.indexOf(answerLabel);
+    const answerText = choices[answerIndex]?.trim() ?? choices[0]?.trim() ?? "";
+    const err = await onSave(index, {
+      question: qText.trim(),
+      choices,
+      answer: answerText,
+      explanation: explanation.trim() || undefined,
+    });
     setSaving(false);
+    if (err) { setRowError(err); return; }
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
@@ -69,119 +76,99 @@ const QuestionRow = ({
   const handleDelete = async () => {
     if (!confirmDelete) { setConfirmDelete(true); return; }
     setDeleting(true);
-    await onDelete(index);
+    const err = await onDelete(index);
+    if (err) { setRowError(err); setDeleting(false); setConfirmDelete(false); }
   };
 
   return (
-    <div
-      className="rounded-2xl border overflow-hidden transition-all"
+    <div className="rounded-2xl border overflow-hidden transition-all"
       style={{
         borderColor: expanded ? `rgb(var(--theme-glow) / 0.25)` : `rgb(var(--theme-glow) / 0.12)`,
         backgroundColor: `rgb(var(--theme-glow) / 0.02)`,
-      }}
-    >
-      {/* Header */}
-      <button
-        onClick={() => { setExpanded((p) => !p); setConfirmDelete(false); }}
+      }}>
+      <button onClick={() => { setExpanded((p) => !p); setConfirmDelete(false); }}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all"
-        style={{ backgroundColor: expanded ? `rgb(var(--theme-glow) / 0.04)` : "transparent" }}
-      >
+        style={{ backgroundColor: expanded ? `rgb(var(--theme-glow) / 0.04)` : "transparent" }}>
         <span className="font-mono text-[10px] w-7 h-7 rounded flex items-center justify-center shrink-0 border"
           style={{ borderColor: `rgb(var(--theme-glow) / 0.2)`, color: `rgb(var(--theme-glow) / 0.5)`, backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}>
           {String(index + 1).padStart(2, "0")}
         </span>
         <span className="flex-1 text-sm font-semibold truncate">{qText || "—"}</span>
-        {isDirty && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "var(--theme-primary)" }} />}
+        {isDirty && (
+          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-primary)" }}>
+            unsaved
+          </span>
+        )}
         <ChevronDown className="w-4 h-4 shrink-0 transition-transform duration-200"
           style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", color: `rgb(var(--theme-glow) / 0.4)` }} />
       </button>
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
-
-          {/* Question text */}
           <div className="space-y-1.5 pt-3">
             <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// question</label>
-            <textarea
-              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border resize-none transition-all leading-relaxed"
+            <textarea className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border resize-none transition-all leading-relaxed"
               style={{ backgroundColor: `rgb(var(--theme-glow) / 0.03)`, borderColor: `rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)", minHeight: 72 }}
-              value={qText}
-              onChange={(e) => setQText(e.target.value)}
+              value={qText} onChange={(e) => setQText(e.target.value)}
               onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
               onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-              maxLength={500}
-            />
+              maxLength={500} />
           </div>
 
-          {/* Choices */}
           <div className="space-y-1.5">
             <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// choices</label>
             {choices.map((choice, ci) => (
               <div key={ci} className="flex items-center gap-2">
-                <button
-                  onClick={() => setAnswer(CHOICE_LABELS[ci])}
+                <button onClick={() => setAnswerLabel(CHOICE_LABELS[ci])}
                   className="w-6 h-6 rounded flex items-center justify-center font-mono text-[10px] shrink-0 border transition-all"
                   style={{
-                    borderColor: answer === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.2)`,
-                    backgroundColor: answer === CHOICE_LABELS[ci] ? `rgb(var(--theme-glow) / 0.15)` : "transparent",
-                    color: answer === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.4)`,
-                  }}
-                  title={`Set ${CHOICE_LABELS[ci]} as correct answer`}
-                >
+                    borderColor: answerLabel === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.2)`,
+                    backgroundColor: answerLabel === CHOICE_LABELS[ci] ? `rgb(var(--theme-glow) / 0.15)` : "transparent",
+                    color: answerLabel === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.4)`,
+                  }}>
                   {CHOICE_LABELS[ci]}
                 </button>
-                <input
-                  className="flex-1 rounded-xl px-3 py-2 text-sm outline-none border transition-all"
+                <input className="flex-1 rounded-xl px-3 py-2 text-sm outline-none border transition-all"
                   style={{ backgroundColor: `rgb(var(--theme-glow) / 0.03)`, borderColor: `rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)" }}
                   value={choice}
-                  onChange={(e) => {
-                    const updated = [...choices];
-                    updated[ci] = e.target.value;
-                    setChoices(updated);
-                  }}
+                  onChange={(e) => { const u = [...choices]; u[ci] = e.target.value; setChoices(u); }}
                   onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-                  maxLength={200}
-                />
+                  maxLength={200} />
               </div>
             ))}
             <p className="font-mono text-[9px]" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-              // click letter to set correct answer · currently: {answer}
+              // click letter to set correct answer · currently: {answerLabel}
             </p>
           </div>
 
-          {/* Explanation */}
           <div className="space-y-1.5">
             <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// explanation</label>
-            <textarea
-              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border resize-none transition-all leading-relaxed"
+            <textarea className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border resize-none transition-all leading-relaxed"
               style={{ backgroundColor: `rgb(var(--theme-glow) / 0.03)`, borderColor: `rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)", minHeight: 72 }}
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
+              value={explanation} onChange={(e) => setExplanation(e.target.value)}
               onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
               onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-              placeholder="Optional explanation..."
-              maxLength={1000}
-            />
+              placeholder="Optional explanation..." maxLength={1000} />
           </div>
 
-          {/* Actions */}
+          {rowError && (
+            <p className="font-mono text-[10px]" style={{ color: "#ef4444" }}>// error: {rowError}</p>
+          )}
+
           <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleSave}
-              disabled={!isDirty || saving || !qText.trim()}
+            <button onClick={handleSave} disabled={!isDirty || !qText.trim() || saving}
               className="flex-1 py-2.5 rounded-[3px] text-xs font-bold font-mono flex items-center justify-center gap-1.5 disabled:opacity-30 transition-all hover:brightness-110"
-              style={{ background: "var(--theme-primary)", color: "#fff" }}
-            >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              style={{ background: "var(--theme-primary)", color: "#fff" }}>
+              {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> saving...</>
                 : saved ? <><Check className="w-3.5 h-3.5" /> saved</>
                 : <><Check className="w-3.5 h-3.5" /> save_changes</>}
             </button>
-
             {confirmDelete ? (
               <div className="flex gap-1.5">
                 <button onClick={handleDelete} disabled={deleting}
-                  className="px-3 py-2.5 rounded-[3px] text-xs font-bold font-mono flex items-center gap-1.5 transition-all"
+                  className="px-3 py-2.5 rounded-[3px] text-xs font-bold font-mono flex items-center gap-1.5 transition-all disabled:opacity-40"
                   style={{ backgroundColor: "rgb(239 68 68 / 0.12)", color: "#ef4444", border: "1px solid rgb(239 68 68 / 0.3)" }}>
                   {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "confirm"}
                 </button>
@@ -207,195 +194,176 @@ const QuestionRow = ({
   );
 };
 
-// ─── Publish modal ────────────────────────────────────────────
-const PublishModal = ({ onPublish, onClose }: { onPublish: (title: string, desc: string) => Promise<void>; onClose: () => void }) => {
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const handle = async () => {
-    if (!title.trim()) { setError("// title is required"); return; }
-    setSaving(true);
-    await onPublish(title.trim(), desc.trim());
-    setSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center px-6"
-      style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
-      onClick={onClose}>
-      <div className="relative rounded-2xl overflow-hidden w-full max-w-sm"
-        style={{ backgroundColor: "var(--background)", border: `1px solid rgb(var(--theme-glow) / 0.2)` }}
-        onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-1.5 px-4 py-2.5 border-b"
-          style={{ borderColor: `rgb(var(--theme-glow) / 0.1)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}>
-          <span className="w-2 h-2 rounded-full bg-red-400/50" />
-          <span className="w-2 h-2 rounded-full bg-yellow-400/50" />
-          <span className="w-2 h-2 rounded-full bg-green-400/50" />
-          <span className="ml-3 font-mono text-[10px] flex-1" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>publish_quiz.sh</span>
-          <button onClick={onClose} className="hover:opacity-60 transition-opacity" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <h2 className="text-xl font-black">Publish Quiz</h2>
-            <p className="font-mono text-[10px] mt-0.5" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-              // share with the community
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// title *</label>
-            <input autoFocus className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border transition-all"
-              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.03)`, borderColor: `rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)" }}
-              placeholder="Quiz title..."
-              value={title} onChange={(e) => { setTitle(e.target.value); setError(""); }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-              maxLength={80} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// description</label>
-            <textarea className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border resize-none transition-all"
-              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.03)`, borderColor: `rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)", minHeight: 72 }}
-              placeholder="What is this quiz about..."
-              value={desc} onChange={(e) => setDesc(e.target.value)}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-              maxLength={200} />
-          </div>
-          {error && <p className="font-mono text-xs" style={{ color: "#ef4444" }}>{error}</p>}
-          <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold font-mono transition-all"
-              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)`, color: "var(--muted-foreground)", border: `1px solid rgb(var(--theme-glow) / 0.12)` }}>
-              cancel
-            </button>
-            <button onClick={handle} disabled={saving || !title.trim()}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold font-mono flex items-center justify-center gap-1.5 disabled:opacity-30 transition-all hover:brightness-110"
-              style={{ background: "var(--theme-primary)", color: "#fff" }}>
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Globe className="w-3.5 h-3.5" /> $ publish</>}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─── Main page ────────────────────────────────────────────────
 const QuizEditPage = () => {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const isNew = id === "new";
 
-  const [quiz, setQuiz] = useState<DBQuizSession | null>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteQuiz, setConfirmDeleteQuiz] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [publishError, setPublishError] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
-  const [savingTitle, setSavingTitle] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const [adding, setAdding] = useState(false);
   const [newQ, setNewQ] = useState("");
   const [newChoices, setNewChoices] = useState(["", "", "", ""]);
-  const [newAnswer, setNewAnswer] = useState("A");
+  const [newAnswerLabel, setNewAnswerLabel] = useState("A");
   const [newExplanation, setNewExplanation] = useState("");
-  const [savingNew, setSavingNew] = useState(false);
-
-  const [showPublishModal, setShowPublishModal] = useState(false);
-  const [publishSuccess, setPublishSuccess] = useState(false);
 
   useEffect(() => {
-    getQuizSession(id).then((data) => {
-      if (!data) { setNotFound(true); setLoading(false); return; }
-      if (data.source_published_quiz_id) {
-        // community quiz — redirect back
-        router.replace("/quizzes");
+    const loadQuiz = async () => {
+      if (isNew) { setLoading(false); return; }
+      const data = await getQuiz(id);
+      if (!data) { router.push("/quizzes"); return; }
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && data.creator_id !== user.id) { router.push("/quizzes"); return; }
+      setQuiz(data);
+      setQuestions(data.questions ?? []);
+      setTitle(data.title);
+      setDescription(data.description ?? "");
+      setLoading(false);
+    };
+    loadQuiz();
+  }, [id, isNew, router]);
+
+  useEffect(() => { if (editingTitle) titleInputRef.current?.focus(); }, [editingTitle]);
+
+  // ── Persist questions array to DB ──
+  const persistQuestions = async (updated: QuizQuestion[]): Promise<string | null> => {
+    if (isNew) return null;
+    const { error } = await updateQuiz(id, {
+      questions: updated,
+      question_count: updated.length,
+    });
+    if (error) setSaveError(error);
+    return error;
+  };
+
+  const handleSaveQuestion = async (index: number, data: Partial<QuizQuestion>): Promise<string | null> => {
+    const updated = [...questions];
+    updated[index] = { ...updated[index], ...data };
+    setQuestions(updated);
+    return persistQuestions(updated);
+  };
+
+  const handleDeleteQuestion = async (index: number): Promise<string | null> => {
+    const updated = questions.filter((_, i) => i !== index);
+    setQuestions(updated);
+    return persistQuestions(updated);
+  };
+
+  // ── Top-level save ──
+  const handleSaveQuiz = async () => {
+    if (!title.trim()) { setSaveError("Quiz needs a title before saving."); return; }
+    setSaving(true);
+    setSaveError("");
+
+    if (isNew) {
+      if (questions.length === 0) {
+        setSaveError("Add at least one question before saving.");
+        setSaving(false);
         return;
       }
-      setQuiz(data);
-      setTitle(data.title);
-      setQuestions(data.questions ?? []);
-      setLoading(false);
-    });
-  }, [id]);
-
-  useEffect(() => {
-    if (editingTitle) titleInputRef.current?.focus();
-  }, [editingTitle]);
-
-  const handleSaveTitle = async () => {
-    if (!title.trim() || title.trim() === quiz?.title) { setEditingTitle(false); return; }
-    setSavingTitle(true);
-    await updateQuizTitle(id, title.trim());
-    setQuiz((prev) => prev ? { ...prev, title: title.trim() } : prev);
-    setSavingTitle(false);
-    setEditingTitle(false);
+      const { data: created, error } = await createQuiz(title.trim(), questions, description);
+      if (error || !created) {
+        setSaveError(error ?? "Failed to save. Please try again.");
+        setSaving(false);
+        return;
+      }
+      router.push(`/quizzes/${created.id}/edit`);
+    } else {
+      const { error } = await updateQuiz(id, {
+        title: title.trim(),
+        description,
+        questions,
+        question_count: questions.length,
+      });
+      if (error) setSaveError(error);
+    }
+    setSaving(false);
   };
 
-  const handleSaveQuestion = async (index: number, data: Partial<QuizQuestion>) => {
-    await updateQuizQuestion(id, index, data, questions);
-    setQuestions((prev) => prev.map((q, i) => i === index ? { ...q, ...data } : q));
-  };
-
-  const handleDeleteQuestion = async (index: number) => {
-    await deleteQuizQuestion(id, index, questions);
-    setQuestions((prev) => prev.filter((_, i) => i !== index));
-  };
-
+  // ── Add question ──
   const handleAddQuestion = async () => {
     if (!newQ.trim() || newChoices.some((c) => !c.trim())) return;
-    setSavingNew(true);
-    const answerIndex = CHOICE_LABELS.indexOf(newAnswer);
-    const q: QuizQuestion = {
+    const answerIndex = CHOICE_LABELS.indexOf(newAnswerLabel);
+    const answerText = newChoices[answerIndex]?.trim() ?? newChoices[0]?.trim() ?? "";
+    const newQuestion: QuizQuestion = {
       question: newQ.trim(),
       choices: newChoices.map((c) => c.trim()),
-      answer: newChoices[answerIndex]?.trim() ?? newAnswer,
+      answer: answerText,
       explanation: newExplanation.trim() || undefined,
     };
-    await addQuizQuestion(id, q, questions);
-    setQuestions((prev) => [...prev, q]);
-    setNewQ(""); setNewChoices(["", "", "", ""]); setNewAnswer("A"); setNewExplanation(""); setAdding(false);
-    setSavingNew(false);
-  };
+    const updatedQuestions = [...questions, newQuestion];
+    setQuestions(updatedQuestions);
+    setNewQ(""); setNewChoices(["", "", "", ""]); setNewAnswerLabel("A"); setNewExplanation(""); setAdding(false);
 
-  const handlePublish = async (pubTitle: string, desc: string) => {
-    const { error } = await publishQuiz(id, pubTitle, desc);
-    if (!error) {
-      setPublishSuccess(true);
-      setShowPublishModal(false);
-      setQuiz((prev) => prev ? { ...prev, source_published_quiz_id: "published" } : prev);
+    setSaving(true);
+    setSaveError("");
+
+    if (isNew && title.trim()) {
+      const { data: created, error } = await createQuiz(title.trim(), updatedQuestions, description);
+      setSaving(false);
+      if (error || !created) { setSaveError(error ?? "Failed to save."); return; }
+      router.replace(`/quizzes/${created.id}/edit`);
+    } else if (!isNew) {
+      const { error } = await updateQuiz(id, {
+        questions: updatedQuestions,
+        question_count: updatedQuestions.length,
+      });
+      setSaving(false);
+      if (error) setSaveError(error);
+    } else {
+      setSaving(false);
     }
   };
 
+  // ── Delete entire quiz (cascades stars + detaches attempts first) ──
+  const handleDeleteQuiz = async () => {
+    if (!confirmDeleteQuiz) { setConfirmDeleteQuiz(true); return; }
+    setDeleting(true);
+    const { error } = await deleteQuiz(id);
+    if (!error) {
+      router.push("/quizzes");
+    } else {
+      setSaveError(error);
+      setDeleting(false);
+      setConfirmDeleteQuiz(false);
+    }
+  };
+
+  // ── Publish / unpublish ──
+  const handlePublish = async () => {
+    if (!description.trim()) { setPublishError("Description required to publish."); return; }
+    setPublishError("");
+    const { error } = await publishQuiz(id, description.trim());
+    if (error) { setPublishError(`Publish failed: ${error}`); return; }
+    setQuiz((prev) => prev ? { ...prev, is_published: true, description } : prev);
+  };
+
   const handleUnpublish = async () => {
-    if (!quiz?.source_published_quiz_id) return;
-    await unpublishQuiz(quiz.source_published_quiz_id);
-    setQuiz((prev) => prev ? { ...prev, source_published_quiz_id: null } : prev);
-    setPublishSuccess(false);
+    const { error } = await unpublishQuiz(id);
+    if (!error) setQuiz((prev) => prev ? { ...prev, is_published: false, published_at: null } : prev);
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-8 h-8 rounded-full border-2 animate-spin"
         style={{ borderColor: "var(--theme-primary)", borderTopColor: "transparent" }} />
     </div>
   );
 
-  if (notFound) return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground gap-3">
-      <p className="font-mono text-sm" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// 404</p>
-      <p className="font-bold text-lg">Quiz not found</p>
-      <button onClick={() => router.push("/quizzes")} className="text-sm font-mono mt-2" style={{ color: "var(--theme-primary)" }}>
-        ← back_to_quizzes
-      </button>
-    </div>
-  );
-
-  const isPublished = !!quiz?.source_published_quiz_id;
+  const isPublished = quiz?.is_published ?? false;
+  const saveDisabledReason = !title.trim() ? "add a title first" : questions.length === 0 ? "add at least one question" : null;
 
   return (
     <>
@@ -405,23 +373,13 @@ const QuizEditPage = () => {
         .card-enter { animation: fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) forwards; opacity: 0; }
       `}</style>
 
-      {showPublishModal && (
-        <PublishModal
-          onPublish={handlePublish}
-          onClose={() => setShowPublishModal(false)}
-        />
-      )}
-
       <div className="min-h-screen bg-background text-foreground">
         <div className="max-w-2xl mx-auto px-5 pt-14 pb-24 space-y-8 page-enter">
-
-          {/* Breadcrumb */}
           <div className="flex items-center gap-2 font-mono text-[11px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
             <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
             <span>~/retainly/quizzes/edit</span>
           </div>
 
-          {/* Header */}
           <div className="space-y-3">
             <button onClick={() => router.push("/quizzes")}
               className="flex items-center gap-1.5 font-mono text-xs transition-all hover:opacity-70"
@@ -429,80 +387,131 @@ const QuizEditPage = () => {
               <ArrowLeft className="w-3.5 h-3.5" /> back_to_quizzes
             </button>
 
-            {/* Editable title */}
             <div className="flex items-start gap-3">
               {editingTitle ? (
-                <div className="flex-1 flex items-center gap-2">
-                  <input ref={titleInputRef}
-                    className="flex-1 text-4xl font-black bg-transparent outline-none border-b-2 pb-1"
-                    style={{ borderColor: "var(--theme-primary)", color: "var(--foreground)" }}
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleSaveTitle(); if (e.key === "Escape") { setTitle(quiz?.title ?? ""); setEditingTitle(false); } }}
-                    onBlur={handleSaveTitle}
-                    maxLength={80} />
-                  {savingTitle && <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: "var(--theme-primary)" }} />}
-                </div>
+                <input ref={titleInputRef}
+                  className="flex-1 text-4xl font-black bg-transparent outline-none border-b-2 pb-1"
+                  style={{ borderColor: "var(--theme-primary)", color: "var(--foreground)" }}
+                  value={title} onChange={(e) => setTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") setEditingTitle(false);
+                    if (e.key === "Escape") { setTitle(quiz?.title ?? ""); setEditingTitle(false); }
+                  }}
+                  onBlur={() => setEditingTitle(false)} maxLength={80} />
               ) : (
                 <button className="flex items-start gap-2 group text-left" onClick={() => setEditingTitle(true)}>
-                  <h1 className="text-4xl font-black tracking-tight leading-tight">{title}</h1>
-                  <Pencil className="w-4 h-4 mt-2 opacity-0 group-hover:opacity-40 transition-opacity shrink-0" style={{ color: "var(--theme-primary)" }} />
+                  <h1 className="text-4xl font-black tracking-tight leading-tight"
+                    style={{ color: title ? "var(--foreground)" : `rgb(var(--theme-glow) / 0.3)` }}>
+                    {title || "Untitled Quiz"}
+                  </h1>
+                  <Pencil className="w-4 h-4 mt-2 opacity-0 group-hover:opacity-40 transition-opacity shrink-0"
+                    style={{ color: "var(--theme-primary)" }} />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <p className="font-mono text-xs" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
                 // {questions.length} question{questions.length !== 1 ? "s" : ""}
+                {saving && <span className="ml-2" style={{ color: "var(--theme-primary)" }}>saving...</span>}
               </p>
 
-              {/* Publish / unpublish */}
-              {isPublished || publishSuccess ? (
-                <button onClick={handleUnpublish}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold transition-all hover:opacity-70"
-                  style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-badge-text)", border: `1px solid rgb(var(--theme-glow) / 0.2)` }}>
-                  <Globe className="w-3 h-3" /> published · unpublish
-                </button>
+              {!isNew && (isPublished ? (
+                <>
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold"
+                    style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-badge-text)", border: `1px solid rgb(var(--theme-glow) / 0.2)` }}>
+                    <Globe className="w-3 h-3" /> published
+                  </span>
+                  <button onClick={handleUnpublish}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold transition-all hover:opacity-70"
+                    style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-badge-text)", border: `1px solid rgb(var(--theme-glow) / 0.2)` }}>
+                    <EyeOff className="w-3 h-3" /> unpublish
+                  </button>
+                </>
               ) : (
-                <button onClick={() => setShowPublishModal(true)}
+                <button onClick={handlePublish}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold transition-all hover:brightness-110"
                   style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)`, color: `rgb(var(--theme-glow) / 0.5)`, border: `1px solid rgb(var(--theme-glow) / 0.15)` }}>
                   <Globe className="w-3 h-3" /> publish
                 </button>
+              ))}
+
+              {publishError && <p className="font-mono text-[10px] w-full" style={{ color: "#ef4444" }}>{publishError}</p>}
+
+              {!isNew && (
+                <button onClick={handleSaveQuiz} disabled={saving || !!saveDisabledReason}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-40"
+                  style={{ background: "var(--theme-primary)", color: "#fff" }}>
+                  {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Check className="w-3 h-3" /> save</>}
+                </button>
               )}
+
+              {!isNew && (confirmDeleteQuiz ? (
+                <div className="flex items-center gap-1.5">
+                  <button onClick={handleDeleteQuiz} disabled={deleting}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold transition-all disabled:opacity-40"
+                    style={{ backgroundColor: "rgb(239 68 68 / 0.12)", color: "#ef4444", border: "1px solid rgb(239 68 68 / 0.3)" }}>
+                    {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : "confirm_delete"}
+                  </button>
+                  <button onClick={() => setConfirmDeleteQuiz(false)}
+                    className="px-2.5 py-1 rounded-lg font-mono text-[10px] transition-all"
+                    style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)`, color: "var(--muted-foreground)", border: `1px solid rgb(var(--theme-glow) / 0.15)` }}>
+                    cancel
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleDeleteQuiz}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold transition-all"
+                  style={{ backgroundColor: `rgb(var(--theme-glow) / 0.04)`, color: `rgb(var(--theme-glow) / 0.4)`, border: `1px solid rgb(var(--theme-glow) / 0.12)` }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgb(239 68 68 / 0.08)"; (e.currentTarget as HTMLButtonElement).style.color = "#ef4444"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgb(239 68 68 / 0.3)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.04)`; (e.currentTarget as HTMLButtonElement).style.color = `rgb(var(--theme-glow) / 0.4)`; (e.currentTarget as HTMLButtonElement).style.borderColor = `rgb(var(--theme-glow) / 0.12)`; }}>
+                  <Trash2 className="w-3 h-3" /> delete_quiz
+                </button>
+              ))}
             </div>
+
+            {saveDisabledReason && !isNew && (
+              <div className="flex items-center gap-2 font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
+                <AlertCircle className="w-3 h-3" /><span>// {saveDisabledReason}</span>
+              </div>
+            )}
+
+            {saveError && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl border font-mono text-[10px]"
+                style={{ borderColor: "rgb(239 68 68 / 0.3)", backgroundColor: "rgb(239 68 68 / 0.06)", color: "#ef4444" }}>
+                <AlertCircle className="w-3 h-3 shrink-0" /><span>{saveError}</span>
+              </div>
+            )}
+
+            {isNew && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl border font-mono text-[10px]"
+                style={{ borderColor: `rgb(var(--theme-glow) / 0.15)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)`, color: `rgb(var(--theme-glow) / 0.45)` }}>
+                <span style={{ color: "var(--theme-primary)" }}>$</span>
+                <span>{!title.trim() ? "enter a title above, then add your first question to save" : "add your first question below — it will be saved automatically"}</span>
+              </div>
+            )}
           </div>
 
-          {/* Questions list */}
           <div>
             <SectionRule label="// QUESTIONS" />
             <div className="space-y-2.5">
               {questions.length === 0 && !adding ? (
                 <div className="rounded-2xl border px-5 py-8 text-center"
                   style={{ borderColor: `rgb(var(--theme-glow) / 0.1)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}>
-                  <p className="font-mono text-xs" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
-                    // no questions yet — add one below
-                  </p>
+                  <p className="font-mono text-xs" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// no questions yet — add one below</p>
                 </div>
               ) : (
                 questions.map((q, i) => (
                   <div key={i} className="card-enter" style={{ animationDelay: `${i * 40}ms` }}>
-                    <QuestionRow
-                      question={q}
-                      index={i}
-                      onSave={handleSaveQuestion}
-                      onDelete={handleDeleteQuestion}
-                    />
+                    <QuestionRow question={q} index={i} onSave={handleSaveQuestion} onDelete={handleDeleteQuestion} />
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          {/* Add new question */}
           <div>
             <SectionRule label="// ADD QUESTION" />
-
             {adding ? (
               <div className="rounded-2xl border overflow-hidden"
                 style={{ borderColor: `rgb(var(--theme-glow) / 0.25)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}>
@@ -522,56 +531,47 @@ const QuizEditPage = () => {
                       value={newQ} onChange={(e) => setNewQ(e.target.value)}
                       onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
                       onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-                      placeholder="Question text..."
-                      maxLength={500} />
+                      placeholder="Question text..." maxLength={500} />
                   </div>
-
                   <div className="space-y-1.5">
-                    <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// choices (click letter = correct)</label>
+                    <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// choices (click letter = correct answer)</label>
                     {newChoices.map((c, ci) => (
                       <div key={ci} className="flex items-center gap-2">
-                        <button onClick={() => setNewAnswer(CHOICE_LABELS[ci])}
+                        <button onClick={() => setNewAnswerLabel(CHOICE_LABELS[ci])}
                           className="w-6 h-6 rounded flex items-center justify-center font-mono text-[10px] shrink-0 border transition-all"
                           style={{
-                            borderColor: newAnswer === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.2)`,
-                            backgroundColor: newAnswer === CHOICE_LABELS[ci] ? `rgb(var(--theme-glow) / 0.15)` : "transparent",
-                            color: newAnswer === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.4)`,
+                            borderColor: newAnswerLabel === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.2)`,
+                            backgroundColor: newAnswerLabel === CHOICE_LABELS[ci] ? `rgb(var(--theme-glow) / 0.15)` : "transparent",
+                            color: newAnswerLabel === CHOICE_LABELS[ci] ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.4)`,
                           }}>
                           {CHOICE_LABELS[ci]}
                         </button>
-                        <input
-                          className="flex-1 rounded-xl px-3 py-2 text-sm outline-none border transition-all"
+                        <input className="flex-1 rounded-xl px-3 py-2 text-sm outline-none border transition-all"
                           style={{ backgroundColor: `rgb(var(--theme-glow) / 0.03)`, borderColor: `rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)" }}
-                          value={c}
-                          onChange={(e) => { const u = [...newChoices]; u[ci] = e.target.value; setNewChoices(u); }}
+                          value={c} onChange={(e) => { const u = [...newChoices]; u[ci] = e.target.value; setNewChoices(u); }}
                           onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
                           onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-                          placeholder={`Choice ${CHOICE_LABELS[ci]}...`}
-                          maxLength={200} />
+                          placeholder={`Choice ${CHOICE_LABELS[ci]}...`} maxLength={200} />
                       </div>
                     ))}
                   </div>
-
                   <div className="space-y-1.5">
-                    <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// explanation</label>
-                    <textarea
-                      className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border resize-none transition-all"
+                    <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// explanation (optional)</label>
+                    <textarea className="w-full rounded-xl px-3 py-2.5 text-sm outline-none border resize-none transition-all"
                       style={{ backgroundColor: `rgb(var(--theme-glow) / 0.03)`, borderColor: `rgb(var(--theme-glow) / 0.15)`, color: "var(--foreground)", minHeight: 60 }}
                       value={newExplanation} onChange={(e) => setNewExplanation(e.target.value)}
                       onFocus={(e) => { e.currentTarget.style.borderColor = "var(--theme-primary)"; }}
                       onBlur={(e) => { e.currentTarget.style.borderColor = `rgb(var(--theme-glow) / 0.15)`; }}
-                      placeholder="Optional explanation..."
-                      maxLength={1000} />
+                      placeholder="Optional explanation..." maxLength={1000} />
                   </div>
-
                   <div className="flex gap-2 pt-1">
                     <button onClick={handleAddQuestion}
-                      disabled={!newQ.trim() || newChoices.some((c) => !c.trim()) || savingNew}
+                      disabled={!newQ.trim() || newChoices.some((c) => !c.trim()) || saving}
                       className="flex-1 py-2.5 rounded-xl text-xs font-bold font-mono flex items-center justify-center gap-1.5 disabled:opacity-30 transition-all hover:brightness-110"
                       style={{ background: "var(--theme-primary)", color: "#fff" }}>
-                      {savingNew ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Plus className="w-3.5 h-3.5" /> add_question</>}
+                      {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> saving...</> : <><Plus className="w-3.5 h-3.5" /> add_question</>}
                     </button>
-                    <button onClick={() => { setAdding(false); setNewQ(""); setNewChoices(["", "", "", ""]); setNewAnswer("A"); setNewExplanation(""); }}
+                    <button onClick={() => { setAdding(false); setNewQ(""); setNewChoices(["", "", "", ""]); setNewAnswerLabel("A"); setNewExplanation(""); }}
                       className="px-3 py-2.5 rounded-xl text-xs font-mono transition-all"
                       style={{ backgroundColor: `rgb(var(--theme-glow) / 0.06)`, color: "var(--muted-foreground)" }}>
                       <X className="w-3.5 h-3.5" />
@@ -580,7 +580,8 @@ const QuizEditPage = () => {
                 </div>
               </div>
             ) : (
-              <button onClick={() => setAdding(true)}
+              <button
+                onClick={() => { if (isNew && !title.trim()) { setSaveError("Enter a title before adding questions."); return; } setSaveError(""); setAdding(true); }}
                 className="w-full py-3 rounded-xl text-xs font-bold font-mono flex items-center justify-center gap-2 border transition-all hover:opacity-80"
                 style={{ borderColor: `rgb(var(--theme-glow) / 0.2)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)`, color: "var(--theme-badge-text)", borderStyle: "dashed" }}>
                 <Plus className="w-3.5 h-3.5" /> new_question

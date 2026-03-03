@@ -2,17 +2,25 @@
 
 import { useState } from "react";
 import { Terminal, X, Check, Loader2 } from "lucide-react";
-import { saveQuizSession, QuizQuestion } from "@/lib/db";
+import { createQuizAttempt, QuizQuestion } from "@/lib/db";
 
 interface SaveQuizModalProps {
   questions: QuizQuestion[];
   score: number;
   total: number;
+  quizId?: string | null;
   onSaved: (id: string) => void;
   onClose: () => void;
 }
 
-const SaveQuizModal = ({ questions, score, total, onSaved, onClose }: SaveQuizModalProps) => {
+const SaveQuizModal = ({
+  questions,
+  score,
+  total,
+  quizId = null,
+  onSaved,
+  onClose,
+}: SaveQuizModalProps) => {
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -21,10 +29,18 @@ const SaveQuizModal = ({ questions, score, total, onSaved, onClose }: SaveQuizMo
     if (!title.trim()) { setError("// title is required"); return; }
     setSaving(true);
     setError("");
-    const session = await saveQuizSession(title.trim(), questions, score, total);
+
+    const attempt = await createQuizAttempt(
+      quizId,
+      title.trim(),
+      questions,
+      score,
+      total
+    );
+
     setSaving(false);
-    if (!session) { setError("// failed to save, try again"); return; }
-    onSaved(session.id);
+    if (!attempt) { setError("// failed to save, try again"); return; }
+    onSaved(attempt.id);
   };
 
   return (
@@ -41,7 +57,6 @@ const SaveQuizModal = ({ questions, score, total, onSaved, onClose }: SaveQuizMo
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Titlebar */}
         <div
           className="flex items-center gap-1.5 px-4 py-2.5 border-b"
           style={{ borderColor: `rgb(var(--theme-glow) / 0.1)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}
@@ -59,7 +74,6 @@ const SaveQuizModal = ({ questions, score, total, onSaved, onClose }: SaveQuizMo
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Header */}
           <div className="space-y-0.5">
             <div className="flex items-center gap-2 font-mono text-[11px]"
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
@@ -72,7 +86,6 @@ const SaveQuizModal = ({ questions, score, total, onSaved, onClose }: SaveQuizMo
             </p>
           </div>
 
-          {/* Title input */}
           <div className="space-y-1.5">
             <label className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
               // quiz title *
@@ -99,7 +112,6 @@ const SaveQuizModal = ({ questions, score, total, onSaved, onClose }: SaveQuizMo
             <p className="font-mono text-xs" style={{ color: "#ef4444" }}>{error}</p>
           )}
 
-          {/* Actions */}
           <div className="flex gap-2">
             <button
               onClick={onClose}

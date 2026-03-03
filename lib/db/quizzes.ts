@@ -5,286 +5,290 @@ import { createClient } from "@/lib/supabase";
 export interface QuizQuestion {
   question: string;
   choices: string[];
-  answer: string;
+  answer: string; // full answer text, NOT a letter label
   explanation?: string;
 }
 
-export interface DBQuizSession {
+export interface Quiz {
   id: string;
-  user_id: string;
-  title: string;
-  questions: QuizQuestion[];
-  score: number;
-  total: number;
-  created_at: string;
-  source_published_quiz_id: string | null;
-  source_creator_username: string | null;
-  source_creator_avatar: string | null;
-}
-
-export interface PublishedQuiz {
-  id: string;
-  quiz_id: string;
-  user_id: string;
+  creator_id: string;
   title: string;
   description: string;
+  questions: QuizQuestion[];
+  question_count: number;
+  is_published: boolean;
+  published_at: string | null;
   add_count: number;
   star_count: number;
-  question_count: number;
-  questions: QuizQuestion[]; // snapshot stored at publish time — avoids RLS on quiz_sessions
   created_at: string;
-  is_starred: boolean;
-  username: string | null;
-  avatar_url: string | null;
-  is_own: boolean;
+  updated_at: string;
+  // Joined / client-side only
+  is_starred?: boolean;
+  is_added?: boolean;        // true if the current user has an attempt row for this quiz
+  username?: string | null;
+  avatar_url?: string | null;
+  // Score for the current user (joined from quiz_attempts)
+  user_score?: number | null;
 }
 
-// ── Quiz Sessions ──────────────────────────────────────────────
+// Only real DB columns — keeps client-side fields out of UPDATE payloads
+type QuizDbUpdate = Partial<
+  Pick<
+    Quiz,
+    | "title"
+    | "description"
+    | "questions"
+    | "question_count"
+    | "is_published"
+    | "published_at"
+    | "updated_at"
+  >
+>;
 
-export const saveQuizSession = async (
+// Lean score record — no quiz data duplicated here
+export interface QuizAttempt {
+  id: string;
+  user_id: string;
+  quiz_id: string;
+  score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Quizzes ────────────────────────────────────────────────────
+
+export const createQuiz = async (
   title: string,
   questions: QuizQuestion[],
-  score: number,
-  total: number
-): Promise<DBQuizSession | null> => {
+  description = ""
+): Promise<{ data: Quiz | null; error: string | null }> => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) return { data: null, error: "Not authenticated" };
 
   const { data, error } = await supabase
-    .from("quiz_sessions")
-    .insert({ title, questions, score, total, user_id: user.id })
+    .from("quizzes")
+    .insert({
+      creator_id: user.id,
+      title,
+      description,
+      questions,
+      question_count: questions.length,
+    })
     .select()
     .single();
 
-  if (error) return null;
+  if (error) return { data: null, error: error.message };
+  return { data, error: null };
+};
+
+export const getQuiz = async (id: string): Promise<Quiz | null> => {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+
+  if (user) {
+    const { data: star } = await supabase
+      .from("quiz_stars")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .eq("quiz_id", id)
+      .maybeSingle();
+    data.is_starred = !!star;
+  }
+
   return data;
 };
 
-export const getQuizSessions = async (): Promise<DBQuizSession[]> => {
+// Returns all quizzes the current user has saved (has a quiz_attempt row for),
+// with their best score joined in.
+export const getMyQuizCollection = async (): Promise<Quiz[]> => {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("quiz_sessions")
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Get the user's attempt rows (just ids + scores)
+  const { data: attempts, error: attemptsError } = await supabase
+    .from("quiz_attempts")
+    .select("quiz_id, score")
+    .eq("user_id", user.id);
+
+  if (attemptsError || !attempts?.length) return [];
+
+  const quizIds = attempts.map((a) => a.quiz_id);
+  const scoreMap = new Map(attempts.map((a) => [a.quiz_id, a.score]));
+
+  // Fetch the full quiz rows
+  const { data: quizzes, error: quizzesError } = await supabase
+    .from("quizzes")
     .select("*")
+    .in("id", quizIds)
+    .order("created_at", { ascending: false });
+
+  if (quizzesError || !quizzes) return [];
+
+  // Fetch creator profiles
+  const creatorIds = [...new Set(quizzes.map((q) => q.creator_id))];
+  const { data: profiles } = await supabase
+    .from("user_profiles")
+    .select("id, username, avatar_url")
+    .in("id", creatorIds);
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  return quizzes.map((q) => ({
+    ...q,
+    user_score: scoreMap.get(q.id) ?? null,
+    username: profileMap.get(q.creator_id)?.username ?? null,
+    avatar_url: profileMap.get(q.creator_id)?.avatar_url ?? null,
+  }));
+};
+
+export const getMyQuizzes = async (): Promise<Quiz[]> => {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select("*")
+    .eq("creator_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return [];
   return data;
 };
 
-export const getQuizSession = async (id: string): Promise<DBQuizSession | null> => {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("quiz_sessions")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) return null;
-  return data;
-};
-
-export const deleteQuizSession = async (id: string): Promise<void> => {
-  const supabase = createClient();
-  await supabase.from("quiz_sessions").delete().eq("id", id);
-};
-
-export const updateQuizTitle = async (id: string, title: string): Promise<boolean> => {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("quiz_sessions")
-    .update({ title })
-    .eq("id", id);
-  return !error;
-};
-
-export const updateQuizQuestion = async (
-  quizId: string,
-  questionIndex: number,
-  data: Partial<QuizQuestion>,
-  allQuestions: QuizQuestion[]
-): Promise<boolean> => {
-  const supabase = createClient();
-  const updated = allQuestions.map((q, i) =>
-    i === questionIndex ? { ...q, ...data } : q
-  );
-  const { error } = await supabase
-    .from("quiz_sessions")
-    .update({ questions: updated })
-    .eq("id", quizId);
-  return !error;
-};
-
-export const deleteQuizQuestion = async (
-  quizId: string,
-  questionIndex: number,
-  allQuestions: QuizQuestion[]
-): Promise<boolean> => {
-  const supabase = createClient();
-  const updated = allQuestions.filter((_, i) => i !== questionIndex);
-  const { error } = await supabase
-    .from("quiz_sessions")
-    .update({ questions: updated })
-    .eq("id", quizId);
-  return !error;
-};
-
-export const addQuizQuestion = async (
-  quizId: string,
-  question: QuizQuestion,
-  allQuestions: QuizQuestion[]
-): Promise<boolean> => {
-  const supabase = createClient();
-  const updated = [...allQuestions, question];
-  const { error } = await supabase
-    .from("quiz_sessions")
-    .update({ questions: updated })
-    .eq("id", quizId);
-  return !error;
-};
-
-// ── Publishing ─────────────────────────────────────────────────
-
-export const publishQuiz = async (
-  quizId: string,
-  title: string,
-  description: string
-): Promise<{ error: string | null }> => {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  const { data: existing } = await supabase
-    .from("published_quizzes")
-    .select("id")
-    .eq("quiz_id", quizId)
-    .maybeSingle();
-
-  if (existing) return { error: "Already published" };
-
-  // Read questions while we still own the session (RLS allows this here).
-  // We snapshot the full questions array onto published_quizzes so that
-  // other users can add the quiz without ever reading quiz_sessions (which
-  // RLS blocks for rows they don't own — the root cause of the 406 error).
-  const { data: session } = await supabase
-    .from("quiz_sessions")
-    .select("questions")
-    .eq("id", quizId)
-    .single();
-
-  const questions: QuizQuestion[] = session?.questions ?? [];
-  const questionCount = questions.length;
-
-  const { data: inserted, error: insertError } = await supabase
-    .from("published_quizzes")
-    .insert({
-      quiz_id: quizId,
-      user_id: user.id,
-      title,
-      description,
-      questions,
-      question_count: questionCount,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !inserted) return { error: insertError?.message ?? "Insert failed" };
-
-  await supabase
-    .from("quiz_sessions")
-    .update({ source_published_quiz_id: inserted.id })
-    .eq("id", quizId);
-
-  return { error: null };
-};
-
-export const unpublishQuiz = async (publishedQuizId: string): Promise<void> => {
-  const supabase = createClient();
-
-  await supabase
-    .from("quiz_sessions")
-    .update({ source_published_quiz_id: null })
-    .eq("source_published_quiz_id", publishedQuizId);
-
-  await supabase.from("published_quizzes").delete().eq("id", publishedQuizId);
-};
-
-// ── Public quizzes ─────────────────────────────────────────────
-
 export const getPublishedQuizzes = async (
   search = "",
   sortBy = "newest",
+  sortDir: "asc" | "desc" = "desc",
   page = 1,
   limit = 8
-): Promise<PublishedQuiz[]> => {
+): Promise<Quiz[]> => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   let query = supabase
-    .from("published_quizzes")
+    .from("quizzes")
     .select("*")
+    .eq("is_published", true)
     .range((page - 1) * limit, page * limit - 1);
 
   if (search) query = query.ilike("title", `%${search}%`);
 
-  if (sortBy === "stars") query = query.order("star_count", { ascending: false });
-  else if (sortBy === "popular") query = query.order("add_count", { ascending: false });
-  else query = query.order("created_at", { ascending: false });
+  const orderOptions = { ascending: sortDir === "asc" };
+  if (sortBy === "stars") query = query.order("star_count", orderOptions);
+  else if (sortBy === "popular") query = query.order("add_count", orderOptions);
+  else query = query.order("created_at", orderOptions);
 
   const { data, error } = await query;
   if (error || !data) return [];
 
-  // Fetch profiles separately
-  const userIds = [...new Set(data.map((d: any) => d.user_id))];
-  const { data: profiles } = await supabase
-    .from("user_profiles")
-    .select("id, username, avatar_url")
-    .in("id", userIds);
-
-  const profileMap = new Map(
-    (profiles ?? []).map((p: any) => [p.id, p])
-  );
-
-  // Get starred ids
   let starredIds: string[] = [];
+  let addedQuizIds: string[] = [];
+
   if (user) {
     const { data: stars } = await supabase
       .from("quiz_stars")
-      .select("published_quiz_id")
+      .select("quiz_id")
       .eq("user_id", user.id);
-    starredIds = (stars ?? []).map((s) => s.published_quiz_id);
+    starredIds = (stars ?? []).map((s) => s.quiz_id);
+
+    const { data: attempts } = await supabase
+      .from("quiz_attempts")
+      .select("quiz_id")
+      .eq("user_id", user.id);
+    addedQuizIds = (attempts ?? []).map((a) => a.quiz_id);
   }
 
-  return data.map((d: any) => ({
-    id: d.id,
-    quiz_id: d.quiz_id,
-    user_id: d.user_id,
-    title: d.title,
-    description: d.description,
-    add_count: d.add_count,
-    star_count: d.star_count,
-    created_at: d.created_at,
+  const creatorIds = [...new Set(data.map((d) => d.creator_id))];
+  const { data: profiles } = await supabase
+    .from("user_profiles")
+    .select("id, username, avatar_url")
+    .in("id", creatorIds);
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  return data.map((d) => ({
+    ...d,
     is_starred: starredIds.includes(d.id),
-    username: profileMap.get(d.user_id)?.username ?? null,
-    avatar_url: profileMap.get(d.user_id)?.avatar_url ?? null,
-    question_count: d.question_count ?? 0,
-    questions: d.questions ?? [],
-    is_own: user ? d.user_id === user.id : false,
+    is_added: addedQuizIds.includes(d.id),
+    username: profileMap.get(d.creator_id)?.username ?? null,
+    avatar_url: profileMap.get(d.creator_id)?.avatar_url ?? null,
   }));
 };
 
 export const getPublishedQuizzesCount = async (search = ""): Promise<number> => {
   const supabase = createClient();
   let query = supabase
-    .from("published_quizzes")
-    .select("id", { count: "exact", head: true });
+    .from("quizzes")
+    .select("id", { count: "exact", head: true })
+    .eq("is_published", true);
   if (search) query = query.ilike("title", `%${search}%`);
   const { count } = await query;
   return count ?? 0;
 };
 
+export const updateQuiz = async (
+  id: string,
+  data: QuizDbUpdate
+): Promise<{ error: string | null }> => {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("quizzes")
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  return { error: error ? error.message : null };
+};
+
+// ON DELETE CASCADE handles quiz_attempts; we still manually clear quiz_stars
+export const deleteQuiz = async (id: string): Promise<{ error: string | null }> => {
+  const supabase = createClient();
+
+  const { error: starsError } = await supabase
+    .from("quiz_stars")
+    .delete()
+    .eq("quiz_id", id);
+  if (starsError) return { error: starsError.message };
+
+  const { error } = await supabase
+    .from("quizzes")
+    .delete()
+    .eq("id", id);
+  return { error: error ? error.message : null };
+};
+
+export const publishQuiz = async (
+  id: string,
+  description: string
+): Promise<{ error: string | null }> => {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("quizzes")
+    .update({ is_published: true, description, published_at: new Date().toISOString() })
+    .eq("id", id);
+  return { error: error ? error.message : null };
+};
+
+export const unpublishQuiz = async (id: string): Promise<{ error: string | null }> => {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("quizzes")
+    .update({ is_published: false, published_at: null })
+    .eq("id", id);
+  return { error: error ? error.message : null };
+};
+
 export const toggleQuizStar = async (
-  publishedQuizId: string,
+  quizId: string,
   isCurrentlyStarred: boolean
 ): Promise<boolean> => {
   const supabase = createClient();
@@ -295,111 +299,99 @@ export const toggleQuizStar = async (
     const { error } = await supabase
       .from("quiz_stars")
       .delete()
-      .eq("published_quiz_id", publishedQuizId)
+      .eq("quiz_id", quizId)
       .eq("user_id", user.id);
     if (error) return true;
-    await supabase.rpc("decrement_quiz_star_count", { p_quiz_id: publishedQuizId });
+    await supabase.rpc("decrement_quiz_star_count", { p_quiz_id: quizId });
     return false;
   } else {
     const { error } = await supabase
       .from("quiz_stars")
-      .insert({ published_quiz_id: publishedQuizId, user_id: user.id });
+      .insert({ quiz_id: quizId, user_id: user.id });
     if (error) return false;
-    await supabase.rpc("increment_quiz_star_count", { p_quiz_id: publishedQuizId });
+    await supabase.rpc("increment_quiz_star_count", { p_quiz_id: quizId });
     return true;
   }
 };
 
-export const addPublishedQuizToMySessions = async (
-  publishedQuizId: string
+// Saves a quiz to the user's collection by creating a quiz_attempt row
+export const addQuizToCollection = async (
+  quizId: string
 ): Promise<{ error: string | null }> => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Read everything from published_quizzes (publicly readable) — we never
-  // touch quiz_sessions of another user, which RLS blocks with a 406 error.
-  const { data: pub, error: pubError } = await supabase
-    .from("published_quizzes")
-    .select("title, user_id, questions, question_count")
-    .eq("id", publishedQuizId)
-    .single();
+  // Check they don't already have it
+  const { data: existing } = await supabase
+    .from("quiz_attempts")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("quiz_id", quizId)
+    .maybeSingle();
 
-  if (pubError || !pub) return { error: "Quiz not found" };
+  if (existing) return { error: null }; // already in collection, not an error
 
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("username, avatar_url")
-    .eq("id", pub.user_id)
-    .single();
+  const { error } = await supabase
+    .from("quiz_attempts")
+    .insert({ user_id: user.id, quiz_id: quizId, score: 0 });
 
-  const { error: insertError } = await supabase
-    .from("quiz_sessions")
-    .insert({
-      user_id: user.id,
-      title: pub.title,
-      questions: pub.questions,
-      score: 0,
-      total: pub.question_count,
-      source_published_quiz_id: publishedQuizId,
-      source_creator_username: profile?.username ?? null,
-      source_creator_avatar: profile?.avatar_url ?? null,
-    });
+  if (error) return { error: error.message };
 
-  if (insertError) return { error: "Failed to save quiz" };
-
-  await supabase.rpc("increment_quiz_add_count", { p_quiz_id: publishedQuizId });
-
+  await supabase.rpc("increment_quiz_add_count", { p_quiz_id: quizId });
   return { error: null };
 };
 
-export const getStarredQuizIds = async (): Promise<string[]> => {
+// ── Quiz Attempts ──────────────────────────────────────────────
+
+// Upserts a score for the current user on a quiz.
+// Call this at the end of a study session.
+export const saveQuizScore = async (
+  quizId: string,
+  score: number
+): Promise<{ error: string | null }> => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return { error: "Not authenticated" };
 
-  const { data, error } = await supabase
-    .from("quiz_stars")
-    .select("published_quiz_id")
-    .eq("user_id", user.id);
+  const { error } = await supabase
+    .from("quiz_attempts")
+    .upsert(
+      { user_id: user.id, quiz_id: quizId, score, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,quiz_id" }
+    );
 
-  if (error) return [];
-  return data.map((s) => s.published_quiz_id);
+  return { error: error ? error.message : null };
 };
 
-export const getMyPublishedQuizzes = async (): Promise<PublishedQuiz[]> => {
+export const getQuizAttempt = async (
+  userId: string,
+  quizId: string
+): Promise<QuizAttempt | null> => {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("quiz_attempts")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("quiz_id", quizId)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+};
+
+export const deleteQuizAttempt = async (
+  quizId: string
+): Promise<boolean> => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return false;
 
-  const { data, error } = await supabase
-    .from("published_quizzes")
-    .select("*")
+  const { error } = await supabase
+    .from("quiz_attempts")
+    .delete()
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .eq("quiz_id", quizId);
 
-  if (error || !data) return [];
-
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("username, avatar_url")
-    .eq("id", user.id)
-    .single();
-
-  return data.map((d: any) => ({
-    id: d.id,
-    quiz_id: d.quiz_id,
-    user_id: d.user_id,
-    title: d.title,
-    description: d.description,
-    add_count: d.add_count,
-    star_count: d.star_count,
-    created_at: d.created_at,
-    is_starred: false,
-    username: profile?.username ?? null,
-    avatar_url: profile?.avatar_url ?? null,
-    question_count: d.question_count ?? 0,
-    questions: d.questions ?? [],
-    is_own: true,
-  }));
+  return !error;
 };
