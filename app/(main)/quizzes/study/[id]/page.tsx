@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, Trophy, Brain,
   Zap, Terminal, ArrowRight, Gem,
 } from "lucide-react";
-import { getQuiz, saveQuizScore, Quiz, QuizQuestion } from "@/lib/db";
+import { getQuiz, saveQuizScore, Quiz, QuizQuestion, logActivity } from "@/lib/db";
 import { useGemsContext } from "@/context/GemsContext";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -110,6 +110,7 @@ const QuizStudyPage = () => {
       }
 
       setPageState("results");
+      await logActivity();
     } else {
       setCurrentIndex((p) => p + 1);
       setSelectedAnswer(null);

@@ -7,7 +7,7 @@ import { Gem, Lock, Zap, ChevronRight, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useGemsContext } from "@/context/GemsContext";
 
-const SPIN_COST = 50;
+const SPIN_COST = 200;
 
 // ── Arknights-style rarity tiers based on theme position ───────
 const getRarity = (index: number) => {
@@ -813,7 +813,7 @@ const GachaPage = () => {
                       <button
                         onClick={handleSpin}
                         disabled={spinning || gems < SPIN_COST}
-                        className={`spin-btn w-full py-3 rounded font-black text-sm flex items-center justify-center gap-2 ${!spinning && gems >= SPIN_COST ? "ready" : ""}`}
+                        className={`spin-btn w-full py-3 rounded font-black font-mono text-sm flex items-center justify-center gap-2 ${!spinning && gems >= SPIN_COST ? "ready" : ""}`}
                         style={{
                           background: "var(--theme-primary)",
                           color: "#fff",
@@ -850,7 +850,7 @@ const GachaPage = () => {
                         className="mt-2 font-mono text-[10px] text-center"
                         style={{ color: `rgb(var(--theme-glow) / 0.35)` }}
                       >
-                        {SPIN_COST - gems} more gems needed — earn by studying
+                        {SPIN_COST - gems} more gems needed, earn by studying
                       </p>
                     )}
                   </div>

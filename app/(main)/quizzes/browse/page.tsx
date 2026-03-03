@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -125,33 +126,39 @@ const PublicQuizCard = ({
           style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
         >
           <span className="flex items-center gap-1">
-            <Zap className="w-3 h-3" /> {quiz.question_count} q&apos;s
+            <Zap className="w-3 h-3" /> {quiz.question_count} questions
           </span>
           <span className="flex items-center gap-1">
-            <Plus className="w-3 h-3" /> {quiz.add_count}
+            <Plus className="w-3 h-3" /> {quiz.add_count} Added
           </span>
           <span>{timeAgo(quiz.created_at)}</span>
         </div>
 
         {/* Creator */}
         {quiz.username && (
-          <div className="flex items-center gap-2">
-            <div
-              className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-[9px] font-black shrink-0"
-              style={{
-                backgroundColor: `rgb(var(--theme-glow) / 0.1)`,
-                color: "var(--theme-primary)",
-              }}
-            >
-              {quiz.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={quiz.avatar_url} alt={quiz.username} className="w-full h-full object-cover" />
-              ) : (quiz.username[0]?.toUpperCase() ?? "?")}
+          <Link
+              href={`/profile/${quiz.username}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 mt-1.5 w-fit transition-opacity hover:opacity-70"
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-[9px] font-black shrink-0"
+                style={{
+                  backgroundColor: `rgb(var(--theme-glow) / 0.1)`,
+                  color: "var(--theme-primary)",
+                }}
+              >
+                {quiz.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={quiz.avatar_url} alt={quiz.username} className="w-full h-full object-cover" />
+                ) : (quiz.username[0]?.toUpperCase() ?? "?")}
+              </div>
+              <span className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.5)` }}>
+                @{quiz.username}
+              </span>
             </div>
-            <span className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.5)` }}>
-              @{quiz.username}
-            </span>
-          </div>
+          </Link>
         )}
 
         <div className="flex-1" />

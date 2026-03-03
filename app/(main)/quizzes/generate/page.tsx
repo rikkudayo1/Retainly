@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   CheckCircle, XCircle, Trophy, Brain,
-  FileText, ChevronDown, Terminal, ArrowRight, Gem, Plus,
+  FileText, ChevronDown, Terminal, ArrowRight, Gem, Plus, X,
 } from "lucide-react";
 import { useGemsContext } from "@/context/GemsContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -26,35 +26,20 @@ type PageState = "input" | "quiz" | "results";
 
 const CHOICE_LABELS = ["A", "B", "C", "D"];
 
-/**
- * The API returns choices as "A. Paris", "B. London", etc.
- * Strip the leading label so choices are stored as plain text: "Paris", "London".
- */
 function stripChoiceLabel(choice: string): string {
-  // Matches "A. ", "A) ", "A - ", "A: " at the start
   return choice.replace(/^[A-Da-d][.):\-]\s*/, "").trim();
 }
 
-/**
- * Resolves the answer letter ("A", "B", "C", "D") returned by the AI
- * to the corresponding clean choice text after labels are stripped.
- */
 function resolveAnswer(answer: string, cleanChoices: string[]): string {
   const trimmed = answer.trim();
-
-  // Primary case: bare letter or "A." / "A)" / "A. some text"
   const letterMatch = trimmed.match(/^([A-Da-d])[.):]?\s*/);
   if (letterMatch) {
-    const letterIndex = letterMatch[1].toUpperCase().charCodeAt(0) - 65; // A=0
+    const letterIndex = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
     if (letterIndex >= 0 && letterIndex < cleanChoices.length) {
       return cleanChoices[letterIndex];
     }
   }
-
-  // Fallback: already matches a clean choice
   if (cleanChoices.includes(trimmed)) return trimmed;
-
-  // Last resort: fuzzy match
   const lower = trimmed.toLowerCase();
   return cleanChoices.find(
     (c) => c.toLowerCase().includes(lower) || lower.includes(c.toLowerCase())
@@ -81,8 +66,6 @@ const QuizGenerationPage = () => {
   const [selectedFile, setSelectedFile] = useState<DBFile | null>(null);
   const [fileDropdownOpen, setFileDropdownOpen] = useState(false);
   const [pastedText, setPastedText] = useState("");
-
-  // New: title + description collected up-front
   const [quizTitle, setQuizTitle] = useState("");
   const [quizDescription, setQuizDescription] = useState("");
 
@@ -100,7 +83,6 @@ const QuizGenerationPage = () => {
   const [wrong, setWrong] = useState(0);
   const [weakness, setWeakness] = useState("");
 
-  // Save state
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -114,8 +96,22 @@ const QuizGenerationPage = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [fileDropdownOpen]);
 
+  // Combines file content + pasted text.
+  // If both present: file is the main source, paste is appended as additional context/instructions.
+  // If only one: just use that one.
+  const buildInputText = () => {
+    const fileText = selectedFile?.text?.trim() ?? "";
+    const extra = pastedText.trim();
+    if (fileText && extra) {
+      return `${fileText}\n\n---\nAdditional context / instructions:\n${extra}`;
+    }
+    return fileText || extra;
+  };
+
+  const hasInput = !!(selectedFile || pastedText.trim());
+
   const handleGenerate = async () => {
-    const inputText = selectedFile ? selectedFile.text : pastedText;
+    const inputText = buildInputText();
     if (!inputText.trim()) { setError(t("quiz.error.empty")); return; }
     if (!quizTitle.trim()) { setError("Please enter a quiz title."); return; }
     setError("");
@@ -133,24 +129,15 @@ const QuizGenerationPage = () => {
         return;
       }
 
-      // 1. Strip "A. " / "B. " prefixes from every choice → plain text
-      // 2. Resolve the answer letter to the matching plain-text choice
       const rawQuestions: QuizQuestion[] = data.output.quiz;
       const normalizedQuestions: QuizQuestion[] = rawQuestions.map((q) => {
         const cleanChoices = q.choices.map(stripChoiceLabel);
-        return {
-          ...q,
-          choices: cleanChoices,
-          answer: resolveAnswer(q.answer, cleanChoices),
-        };
+        return { ...q, choices: cleanChoices, answer: resolveAnswer(q.answer, cleanChoices) };
       });
 
-      // Auto-save to DB immediately
       setSaving(true);
       const { data: quiz, error: quizErr } = await createQuiz(
-        quizTitle.trim(),
-        normalizedQuestions,
-        quizDescription.trim()
+        quizTitle.trim(), normalizedQuestions, quizDescription.trim()
       );
 
       if (quizErr || !quiz) {
@@ -162,8 +149,6 @@ const QuizGenerationPage = () => {
 
       setSavedId(quiz.id);
       setSaving(false);
-
-      // Start quiz
       setQuestions(normalizedQuestions);
       setCurrentIndex(0);
       setResults([]);
@@ -192,32 +177,30 @@ const QuizGenerationPage = () => {
 
   const handleNext = () => {
     if (currentIndex + 1 >= questions.length) {
-      const allResults = [...results];
+      const lastResult: QuizResult = {
+        questionIndex: currentIndex,
+        selected: selectedAnswer!,
+        correct: selectedAnswer === questions[currentIndex].answer,
+      };
+      const allResults = [
+        ...results.filter((r) => r.questionIndex !== currentIndex),
+        lastResult,
+      ];
       const finalCorrect = allResults.filter((r) => r.correct).length;
       const finalWrong = allResults.length - finalCorrect;
 
-      const wrongQ = allResults
-        .filter((r) => !r.correct)
-        .map((r) => questions[r.questionIndex].question);
-
+      const wrongQ = allResults.filter((r) => !r.correct).map((r) => questions[r.questionIndex].question);
       setWeakness(
         wrongQ.length === 0
           ? t("quiz.perfect")
           : wrongQ.map((q, i) => `${i + 1}) ${q}`).join(" | ")
       );
-
       setCorrect(finalCorrect);
       setWrong(finalWrong);
-
       const earned = finalCorrect * 10;
       addGems(earned);
       setGemsEarned(earned);
-
-      // Save score against the already-created quiz
-      if (savedId) {
-        saveQuizScore(savedId, finalCorrect);
-      }
-
+      if (savedId) saveQuizScore(savedId, finalCorrect);
       setPageState("results");
     } else {
       setCurrentIndex((p) => p + 1);
@@ -255,7 +238,7 @@ const QuizGenerationPage = () => {
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
       `}</style>
 
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-xl space-y-8 page-enter">
           <div className="space-y-3">
             <div className="flex items-center gap-2 font-mono text-[11px]"
@@ -272,6 +255,7 @@ const QuizGenerationPage = () => {
 
           <div className="rounded-2xl border overflow-hidden"
             style={{ borderColor: `rgb(var(--theme-glow) / 0.15)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}>
+            {/* Terminal titlebar */}
             <div className="flex items-center gap-1.5 px-4 py-2.5 border-b"
               style={{ borderColor: `rgb(var(--theme-glow) / 0.1)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}>
               <span className="w-2 h-2 rounded-full bg-red-400/50" />
@@ -289,8 +273,6 @@ const QuizGenerationPage = () => {
                 <p className="font-mono text-[11px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
                   // quiz_info
                 </p>
-
-                {/* Title */}
                 <div className="rounded-xl border overflow-hidden" style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}>
                   <div className="flex items-center gap-2 px-3 py-2 border-b font-mono text-[10px]"
                     style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)`, color: `rgb(var(--theme-glow) / 0.35)` }}>
@@ -305,8 +287,6 @@ const QuizGenerationPage = () => {
                     onChange={(e) => setQuizTitle(e.target.value)}
                   />
                 </div>
-
-                {/* Description */}
                 <div className="rounded-xl border overflow-hidden" style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}>
                   <div className="flex items-center gap-2 px-3 py-2 border-b font-mono text-[10px]"
                     style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)`, color: `rgb(var(--theme-glow) / 0.35)` }}>
@@ -329,88 +309,173 @@ const QuizGenerationPage = () => {
                 <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
               </div>
 
-              {/* File selector */}
-              <div className="space-y-2">
-                <p className="font-mono text-[11px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-                  // from library
-                </p>
-                {loadingFiles ? (
-                  <div className="h-10 rounded-xl skeleton-pulse" />
-                ) : (
-                  <div className="relative" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => setFileDropdownOpen((p) => !p)}
-                      className="w-full flex items-center justify-between rounded-xl px-4 py-2.5 border font-mono text-xs transition-all duration-150"
-                      style={{
-                        backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
-                        borderColor: fileDropdownOpen ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.18)`,
-                        color: selectedFile ? "var(--foreground)" : "var(--muted-foreground)",
-                      }}>
-                      <span className="flex items-center gap-2.5 truncate">
-                        <FileText className="w-3.5 h-3.5 shrink-0"
-                          style={{ color: selectedFile ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.35)` }} />
-                        <span className="truncate">{selectedFile ? selectedFile.name : "choose_file..."}</span>
-                      </span>
-                      <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform duration-200"
-                        style={{ transform: fileDropdownOpen ? "rotate(180deg)" : "rotate(0deg)", color: `rgb(var(--theme-glow) / 0.4)` }} />
-                    </button>
+              {/* ── Source block: file + paste combined ── */}
+              <div className="rounded-xl border overflow-hidden"
+                style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}>
 
-                    {fileDropdownOpen && (
-                      <div className="absolute z-50 w-full mt-1.5 rounded-xl border shadow-2xl overflow-hidden"
-                        style={{ backgroundColor: "var(--background)", borderColor: `rgb(var(--theme-glow) / 0.18)` }}>
-                        <div className="px-3 py-2 border-b font-mono text-[10px]"
-                          style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, color: `rgb(var(--theme-glow) / 0.35)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}>
-                          // library
-                        </div>
-                        {storedFiles.length === 0 ? (
-                          <p className="font-mono text-xs px-4 py-3" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
-                            // no files found
-                          </p>
+                {/* Block titlebar */}
+                <div className="flex items-center gap-2 px-3 py-2 border-b font-mono text-[10px]"
+                  style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)`, color: `rgb(var(--theme-glow) / 0.35)` }}>
+                  <span style={{ color: "var(--theme-primary)" }}>$</span>
+                  <span>source</span>
+                  {/* Badge shown only when both are active */}
+                  {selectedFile && pastedText.trim() && (
+                    <span className="ml-auto px-1.5 py-0.5 rounded text-[9px]"
+                      style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-primary)" }}>
+                      file + text active
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-3 space-y-3">
+
+                  {/* File picker */}
+                  <div className="space-y-1.5">
+                    <p className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                      // from_library
+                    </p>
+                    {loadingFiles ? (
+                      <div className="h-9 rounded-lg skeleton-pulse" />
+                    ) : (
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        {selectedFile ? (
+                          /* Selected file pill with X to remove */
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                            style={{ borderColor: "var(--theme-primary)", backgroundColor: `rgb(var(--theme-glow) / 0.06)` }}>
+                            <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--theme-primary)" }} />
+                            <span className="font-mono text-xs flex-1 truncate" style={{ color: "var(--foreground)" }}>
+                              {selectedFile.name}
+                            </span>
+                            <button
+                              onClick={() => setSelectedFile(null)}
+                              className="shrink-0 p-0.5 rounded transition-all hover:opacity-70"
+                              style={{ color: `rgb(var(--theme-glow) / 0.5)` }}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
                         ) : (
-                          <div className="max-h-48 overflow-y-auto p-1.5">
-                            {storedFiles.map((f) => (
-                              <button key={f.id}
-                                onClick={() => { setSelectedFile(f); setPastedText(""); setFileDropdownOpen(false); }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg font-mono text-xs transition-all"
-                                style={{
-                                  color: selectedFile?.id === f.id ? "var(--theme-badge-text)" : "var(--muted-foreground)",
-                                  backgroundColor: selectedFile?.id === f.id ? `rgb(var(--theme-glow) / 0.08)` : "transparent",
-                                }}
-                                onMouseEnter={(e) => { if (selectedFile?.id !== f.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.06)`; }}
-                                onMouseLeave={(e) => { if (selectedFile?.id !== f.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}>
-                                <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: `rgb(var(--theme-glow) / 0.4)` }} />
-                                <span className="truncate">{f.name}</span>
-                                {selectedFile?.id === f.id && <span className="ml-auto" style={{ color: "var(--theme-primary)" }}>✓</span>}
-                              </button>
-                            ))}
+                          /* Dropdown trigger */
+                          <button
+                            onClick={() => setFileDropdownOpen((p) => !p)}
+                            className="w-full flex items-center justify-between rounded-lg px-3 py-2 border font-mono text-xs transition-all"
+                            style={{
+                              backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
+                              borderColor: fileDropdownOpen ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.18)`,
+                              color: "var(--muted-foreground)",
+                            }}>
+                            <span className="flex items-center gap-2 truncate">
+                              <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: `rgb(var(--theme-glow) / 0.35)` }} />
+                              choose_file...
+                            </span>
+                            <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform duration-200"
+                              style={{ transform: fileDropdownOpen ? "rotate(180deg)" : "rotate(0deg)", color: `rgb(var(--theme-glow) / 0.4)` }} />
+                          </button>
+                        )}
+
+                        {fileDropdownOpen && !selectedFile && (
+                          <div className="absolute z-50 w-full mt-1.5 rounded-xl border shadow-2xl overflow-hidden"
+                            style={{ backgroundColor: "var(--background)", borderColor: `rgb(var(--theme-glow) / 0.18)` }}>
+                            <div className="px-3 py-2 border-b font-mono text-[10px]"
+                              style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, color: `rgb(var(--theme-glow) / 0.35)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}>
+                              // library
+                            </div>
+                            {storedFiles.length === 0 ? (
+                              <p className="font-mono text-xs px-4 py-3" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                                // no files found
+                              </p>
+                            ) : (
+                              <div className="max-h-48 overflow-y-auto p-1.5">
+                                {storedFiles.map((f) => (
+                                  <button key={f.id}
+                                    onClick={() => { setSelectedFile(f); setFileDropdownOpen(false); }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg font-mono text-xs transition-all"
+                                    style={{ color: "var(--muted-foreground)", backgroundColor: "transparent" }}
+                                    onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.06)`}
+                                    onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"}>
+                                    <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: `rgb(var(--theme-glow) / 0.4)` }} />
+                                    <span className="truncate">{f.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
-                <span className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>// or</span>
-                <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-mono text-[11px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// paste text</p>
-                <div className="rounded-xl border overflow-hidden" style={{ borderColor: `rgb(var(--theme-glow) / 0.15)` }}>
-                  <div className="flex items-center gap-2 px-3 py-2 border-b font-mono text-[10px]"
-                    style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)`, color: `rgb(var(--theme-glow) / 0.35)` }}>
-                    <span style={{ color: "var(--theme-primary)" }}>$</span>
-                    <span>stdin</span>
+                  {/* Contextual divider */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)` }} />
+                    <span className="font-mono text-[9px]" style={{ color: `rgb(var(--theme-glow) / 0.25)` }}>
+                      {selectedFile ? "// additional_context" : "// or_paste_text"}
+                    </span>
+                    <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)` }} />
                   </div>
-                  <textarea
-                    className="w-full resize-none px-4 py-3 text-sm outline-none min-h-[120px] bg-transparent placeholder:text-muted-foreground/30 leading-relaxed"
-                    style={{ color: "var(--foreground)" }}
-                    placeholder={t("quiz.placeholder")}
-                    value={pastedText}
-                    onChange={(e) => { setPastedText(e.target.value); if (e.target.value) setSelectedFile(null); }} />
+
+                  {/* Paste textarea */}
+                  <div className="space-y-1.5">
+                    <p className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                      {selectedFile
+                        ? "// extra_instructions_or_data (optional)"
+                        : "// paste_text"}
+                    </p>
+                    <div className="rounded-lg border overflow-hidden"
+                      style={{ borderColor: `rgb(var(--theme-glow) / 0.12)` }}>
+                      <div className="flex items-center gap-2 px-3 py-1.5 border-b font-mono text-[10px]"
+                        style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)`, color: `rgb(var(--theme-glow) / 0.3)` }}>
+                        <span style={{ color: "var(--theme-primary)" }}>$</span>
+                        <span>stdin</span>
+                        {/* Hint shown only when a file is selected */}
+                        {selectedFile && (
+                          <span className="ml-auto text-[9px]" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
+                            appended after file
+                          </span>
+                        )}
+                      </div>
+                      <textarea
+                        className="w-full resize-none px-4 py-3 text-sm outline-none bg-transparent placeholder:text-muted-foreground/30 leading-relaxed"
+                        style={{
+                          color: "var(--foreground)",
+                          minHeight: selectedFile ? "80px" : "120px",
+                          transition: "min-height 0.2s ease",
+                        }}
+                        placeholder={
+                          selectedFile
+                            ? "e.g. focus on chapter 3, make it harder, add edge cases..."
+                            : t("quiz.placeholder")
+                        }
+                        value={pastedText}
+                        onChange={(e) => setPastedText(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Active inputs summary */}
+                  {hasInput && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-[10px]"
+                      style={{ backgroundColor: `rgb(var(--theme-glow) / 0.04)`, border: `1px solid rgb(var(--theme-glow) / 0.08)` }}>
+                      <span style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// input:</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {selectedFile && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded"
+                            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-primary)" }}>
+                            <FileText className="w-2.5 h-2.5" /> {selectedFile.name}
+                          </span>
+                        )}
+                        {selectedFile && pastedText.trim() && (
+                          <span style={{ color: `rgb(var(--theme-glow) / 0.25)` }}>+</span>
+                        )}
+                        {pastedText.trim() && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded"
+                            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: `rgb(var(--theme-glow) / 0.6)` }}>
+                            stdin ({pastedText.trim().length} chars)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -419,7 +484,7 @@ const QuizGenerationPage = () => {
               )}
 
               <button onClick={handleGenerate}
-                disabled={loading || saving || (!selectedFile && pastedText.trim().length === 0) || !quizTitle.trim()}
+                disabled={loading || saving || !hasInput || !quizTitle.trim()}
                 className="w-full py-3 rounded-[3px] font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-35"
                 style={{ background: "var(--theme-primary)", color: "#fff" }}>
                 {loading || saving
@@ -576,9 +641,7 @@ const QuizGenerationPage = () => {
                     // session_complete
                   </span>
                   <div className="flex items-center gap-3">
-                    {savedId && (
-                      <span className="font-mono text-[10px]" style={{ color: "#22c55e" }}>✓ saved</span>
-                    )}
+                    {savedId && <span className="font-mono text-[10px]" style={{ color: "#22c55e" }}>✓ saved</span>}
                     {isPerfect && <span className="font-mono text-[10px]" style={{ color: "#22c55e" }}>✓ perfect_score</span>}
                   </div>
                 </div>
@@ -591,7 +654,6 @@ const QuizGenerationPage = () => {
                       <span className="text-3xl font-bold text-muted-foreground">%</span>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-3 font-mono text-xs mt-1">
                     <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
                       style={{ borderColor: "rgb(34 197 94 / 0.3)", backgroundColor: "rgb(34 197 94 / 0.07)", color: "#22c55e" }}>
@@ -676,15 +738,12 @@ const QuizGenerationPage = () => {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3">
-              <button
-                onClick={resetToInput}
+              <button onClick={resetToInput}
                 className="flex-1 py-3 rounded-[3px] font-bold text-sm font-mono transition-all flex items-center justify-center gap-2 hover:opacity-90"
                 style={{ border: `1px solid rgb(var(--theme-glow) / 0.2)`, backgroundColor: `rgb(var(--theme-glow) / 0.04)`, color: "var(--theme-badge-text)" }}>
                 <Plus className="w-4 h-4" /> {t("quiz.retry")}
               </button>
-
               {savedId && (
                 <button onClick={() => router.push("/quizzes")}
                   className="flex-1 py-3 rounded-[3px] font-bold text-sm font-mono transition-all flex items-center justify-center gap-2 hover:brightness-110"

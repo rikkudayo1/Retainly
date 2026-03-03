@@ -259,6 +259,12 @@ export const deleteQuiz = async (id: string): Promise<{ error: string | null }> 
     .eq("quiz_id", id);
   if (starsError) return { error: starsError.message };
 
+  const { error: attemptsError } = await supabase
+    .from("quiz_attempts")
+    .delete()
+    .eq("quiz_id", id);
+  if (attemptsError) return { error: attemptsError.message };
+
   const { error } = await supabase
     .from("quizzes")
     .delete()

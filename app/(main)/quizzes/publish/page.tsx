@@ -95,7 +95,7 @@ const PublishedQuizCard = ({
 
         {/* Edit + Unpublish */}
         <div className="flex gap-2 pt-3 border-t" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
-          <button onClick={() => router.push(`/quizzes/edit/${quiz.id}`)}
+          <button onClick={() => router.push(`/quizzes/${quiz.id}/edit`)}
             className="flex-1 py-2 rounded-xl text-xs font-semibold font-mono transition-all hover:brightness-110"
             style={{
               border: `1px solid rgb(var(--theme-glow) / 0.2)`,
