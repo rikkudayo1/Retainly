@@ -25,10 +25,7 @@ const SectionRule = ({ label }: { label: string }) => (
     >
       {label}
     </span>
-    <div
-      className="flex-1 h-px"
-      style={{ backgroundColor: `rgb(var(--theme-glow) / 0.12)` }}
-    />
+    <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.12)` }} />
   </div>
 );
 
@@ -36,14 +33,17 @@ const QuizCard = ({
   quiz,
   currentUserId,
   onRemove,
+  expanded,
+  onToggleExpand,
 }: {
   quiz: Quiz;
   currentUserId: string | null;
   onRemove: (quizId: string, isOwner: boolean) => void;
+  expanded: boolean;
+  onToggleExpand: () => void;
 }) => {
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const router = useRouter();
 
   const isOwner = !!currentUserId && currentUserId === quiz.creator_id;
@@ -54,10 +54,7 @@ const QuizCard = ({
       : null;
 
   const handleRemove = async () => {
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
+    if (!confirming) { setConfirming(true); return; }
     setRemoving(true);
     await onRemove(quiz.id, isOwner);
   };
@@ -73,68 +70,42 @@ const QuizCard = ({
   };
 
   const scoreColor =
-    scorePercent === null
-      ? `rgb(var(--theme-glow) / 0.3)`
-      : scorePercent >= 80
-        ? "#22c55e"
-        : scorePercent >= 50
-          ? "#f59e0b"
-          : "#ef4444";
+    scorePercent === null ? `rgb(var(--theme-glow) / 0.3)`
+    : scorePercent >= 80  ? "#22c55e"
+    : scorePercent >= 50  ? "#f59e0b"
+    : "#ef4444";
 
   const scoreLabel =
-    scorePercent === null
-      ? null
-      : scorePercent === 100
-        ? "perfect"
-        : scorePercent >= 80
-          ? "great"
-          : scorePercent >= 50
-            ? "okay"
-            : "retry";
+    scorePercent === null   ? null
+    : scorePercent === 100  ? "perfect"
+    : scorePercent >= 80    ? "great"
+    : scorePercent >= 50    ? "okay"
+    : "retry";
 
   return (
     <div
       className="rounded-2xl border overflow-hidden flex flex-col transition-all duration-200"
-      style={{
-        borderColor: `rgb(var(--theme-glow) / 0.15)`,
-        backgroundColor: `rgb(var(--theme-glow) / 0.02)`,
-      }}
+      style={{ borderColor: `rgb(var(--theme-glow) / 0.15)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}
     >
       {/* Titlebar */}
       <div
         className="flex items-center gap-1.5 px-4 py-2 border-b"
-        style={{
-          borderColor: `rgb(var(--theme-glow) / 0.08)`,
-          backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
-        }}
+        style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}
       >
-        <span
-          className="w-1.5 h-1.5 rounded-full shrink-0"
-          style={{ backgroundColor: "var(--theme-primary)", opacity: 0.7 }}
-        />
-        <span
-          className="font-mono text-[9px] truncate flex-1"
-          style={{ color: `rgb(var(--theme-glow) / 0.35)` }}
-        >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "var(--theme-primary)", opacity: 0.7 }} />
+        <span className="font-mono text-[9px] truncate flex-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
           {quiz.title.toLowerCase().replace(/\s+/g, "_")}.quiz
         </span>
         <div className="flex items-center gap-2">
           {quiz.is_published && (
-            <span
-              className="font-mono text-[9px] flex items-center gap-1"
-              style={{ color: "#22c55e" }}
-            >
+            <span className="font-mono text-[9px] flex items-center gap-1" style={{ color: "#22c55e" }}>
               <Globe className="w-2.5 h-2.5" /> public
             </span>
           )}
           {isOwner && (
             <span
               className="font-mono text-[9px] px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
-                color: "var(--theme-primary)",
-                border: `1px solid rgb(var(--theme-glow) / 0.12)`,
-              }}
+              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-primary)", border: `1px solid rgb(var(--theme-glow) / 0.12)` }}
             >
               yours
             </span>
@@ -154,65 +125,36 @@ const QuizCard = ({
             >
               <div
                 className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center text-[8px] font-black shrink-0"
-                style={{
-                  backgroundColor: `rgb(var(--theme-glow) / 0.1)`,
-                  color: "var(--theme-primary)",
-                }}
+                style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)`, color: "var(--theme-primary)" }}
               >
                 {quiz.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={quiz.avatar_url}
-                    alt={quiz.username}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={quiz.avatar_url} alt={quiz.username} className="w-full h-full object-cover" />
                 ) : (
                   quiz.username[0]?.toUpperCase()
                 )}
               </div>
-              <span
-                className="font-mono text-[10px]"
-                style={{ color: `rgb(var(--theme-glow) / 0.45)` }}
-              >
+              <span className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
                 @{quiz.username}
               </span>
             </Link>
           )}
-          <div
-            className="flex items-center gap-3 font-mono text-[10px] mt-2"
-            style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
-          >
-            <span className="flex items-center gap-1">
-              <Zap className="w-3 h-3" /> {quiz.question_count} questions
-            </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {timeAgo(quiz.created_at)}
-            </span>
+          <div className="flex items-center gap-3 font-mono text-[10px] mt-2" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
+            <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {quiz.question_count} questions</span>
+            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{timeAgo(quiz.created_at)}</span>
             {quiz.star_count > 0 && (
-              <span className="flex items-center gap-1">
-                <Star className="w-3 h-3" /> {quiz.star_count}
-              </span>
+              <span className="flex items-center gap-1"><Star className="w-3 h-3" /> {quiz.star_count}</span>
             )}
           </div>
         </div>
 
         {/* Score bar */}
         <div className="space-y-1">
-          <div
-            className="flex items-center justify-between font-mono text-[10px]"
-            style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
-          >
+          <div className="flex items-center justify-between font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
             <span>// best_score</span>
             <span className="flex items-center gap-1.5">
               {scoreLabel && (
-                <span
-                  className="text-[9px] px-1.5 py-0.5 rounded"
-                  style={{
-                    backgroundColor: `${scoreColor}18`,
-                    color: scoreColor,
-                  }}
-                >
+                <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ backgroundColor: `${scoreColor}18`, color: scoreColor }}>
                   {scoreLabel}
                 </span>
               )}
@@ -221,38 +163,26 @@ const QuizCard = ({
               </span>
             </span>
           </div>
-          <div
-            className="h-1 rounded-full overflow-hidden"
-            style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }}
-          >
+          <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }}>
             <div
               className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${scorePercent ?? 0}%`,
-                backgroundColor: scoreColor,
-              }}
+              style={{ width: `${scorePercent ?? 0}%`, backgroundColor: scoreColor }}
             />
           </div>
         </div>
 
         {/* Expand toggle */}
-        {(quiz.description || quiz.questions?.length > 0) && (
+        {(quiz.description || (quiz.questions?.length ?? 0) > 0) && (
           <button
-            onClick={() => setExpanded((p) => !p)}
+            onClick={onToggleExpand}
             className="flex items-center gap-1.5 font-mono text-[10px] transition-all w-fit"
             style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "var(--theme-primary)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = `rgb(var(--theme-glow) / 0.4)`)
-            }
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--theme-primary)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = `rgb(var(--theme-glow) / 0.4)`)}
           >
             <ChevronDown
               className="w-3 h-3 transition-transform duration-200"
-              style={{
-                transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-              }}
+              style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
             />
             {expanded ? "// collapse" : "// show_details"}
           </button>
@@ -262,84 +192,30 @@ const QuizCard = ({
         {expanded && (
           <div
             className="rounded-xl border overflow-hidden text-xs font-mono"
-            style={{
-              borderColor: `rgb(var(--theme-glow) / 0.1)`,
-              backgroundColor: `rgb(var(--theme-glow) / 0.02)`,
-            }}
+            style={{ borderColor: `rgb(var(--theme-glow) / 0.1)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}
           >
             {quiz.description && (
-              <div
-                className="px-3 py-2.5 border-b"
-                style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}
-              >
-                <p
-                  className="text-[9px] mb-1"
-                  style={{ color: `rgb(var(--theme-glow) / 0.35)` }}
-                >
-                  // description
-                </p>
-                <p
-                  className="leading-relaxed"
-                  style={{
-                    color: "var(--muted-foreground)",
-                    fontFamily: "inherit",
-                    fontSize: "11px",
-                  }}
-                >
+              <div className="px-3 py-2.5 border-b" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
+                <p className="text-[9px] mb-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// description</p>
+                <p className="leading-relaxed" style={{ color: "var(--muted-foreground)", fontFamily: "inherit", fontSize: "11px" }}>
                   {quiz.description}
                 </p>
               </div>
             )}
 
-            <div
-              className="flex"
-              style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}
-            >
+            <div className="flex">
               <div className="flex-1 px-3 py-2 flex flex-col gap-0.5">
-                <span
-                  style={{
-                    color: `rgb(var(--theme-glow) / 0.35)`,
-                    fontSize: "9px",
-                  }}
-                >
-                  // questions
-                </span>
-                <span className="font-bold text-foreground">
-                  {quiz.question_count}
-                </span>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>// questions</span>
+                <span className="font-bold text-foreground">{quiz.question_count}</span>
               </div>
-              <div
-                className="flex-1 px-3 py-2 flex flex-col gap-0.5"
-                style={{
-                  borderLeft: `1px solid rgb(var(--theme-glow) / 0.08)`,
-                }}
-              >
-                <span
-                  style={{
-                    color: `rgb(var(--theme-glow) / 0.35)`,
-                    fontSize: "9px",
-                  }}
-                >
-                  // best_score
-                </span>
+              <div className="flex-1 px-3 py-2 flex flex-col gap-0.5" style={{ borderLeft: `1px solid rgb(var(--theme-glow) / 0.08)` }}>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>// best_score</span>
                 <span className="font-bold" style={{ color: scoreColor }}>
                   {scorePercent !== null ? `${scorePercent}%` : "not_played"}
                 </span>
               </div>
-              <div
-                className="flex-1 px-3 py-2 flex flex-col gap-0.5"
-                style={{
-                  borderLeft: `1px solid rgb(var(--theme-glow) / 0.08)`,
-                }}
-              >
-                <span
-                  style={{
-                    color: `rgb(var(--theme-glow) / 0.35)`,
-                    fontSize: "9px",
-                  }}
-                >
-                  // stars
-                </span>
+              <div className="flex-1 px-3 py-2 flex flex-col gap-0.5" style={{ borderLeft: `1px solid rgb(var(--theme-glow) / 0.08)` }}>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>// stars</span>
                 <span className="font-bold text-foreground flex items-center gap-1">
                   <Star className="w-3 h-3" style={{ color: "#f59e0b" }} />
                   {quiz.star_count}
@@ -347,46 +223,25 @@ const QuizCard = ({
               </div>
             </div>
 
-            {quiz.questions?.length > 0 && (
-              <div
-                className="px-3 py-2.5 border-t"
-                style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}
-              >
-                <p
-                  className="text-[9px] mb-2"
-                  style={{ color: `rgb(var(--theme-glow) / 0.35)` }}
-                >
-                  // sample_questions
-                </p>
+            {(quiz.questions?.length ?? 0) > 0 && (
+              <div className="px-3 py-2.5 border-t" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
+                <p className="text-[9px] mb-2" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// sample_questions</p>
                 <div className="space-y-1.5">
                   {quiz.questions.slice(0, 3).map((q: any, i: number) => (
                     <div key={i} className="flex items-start gap-2">
                       <span
                         className="shrink-0 w-4 h-4 rounded flex items-center justify-center text-[9px] mt-0.5"
-                        style={{
-                          backgroundColor: `rgb(var(--theme-glow) / 0.08)`,
-                          color: "var(--theme-primary)",
-                        }}
+                        style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-primary)" }}
                       >
                         {i + 1}
                       </span>
-                      <p
-                        className="leading-relaxed line-clamp-2"
-                        style={{
-                          color: `rgb(var(--theme-glow) / 0.6)`,
-                          fontSize: "11px",
-                          fontFamily: "inherit",
-                        }}
-                      >
+                      <p className="leading-relaxed line-clamp-2" style={{ color: `rgb(var(--theme-glow) / 0.6)`, fontSize: "11px", fontFamily: "inherit" }}>
                         {q.question}
                       </p>
                     </div>
                   ))}
                   {quiz.questions.length > 3 && (
-                    <p
-                      className="text-[9px] pl-6"
-                      style={{ color: `rgb(var(--theme-glow) / 0.3)` }}
-                    >
+                    <p className="text-[9px] pl-6" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
                       +{quiz.questions.length - 3} more...
                     </p>
                   )}
@@ -399,11 +254,7 @@ const QuizCard = ({
         <div className="flex-1" />
 
         {/* Actions */}
-        <div
-          className="flex gap-2 pt-3 border-t"
-          style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}
-        >
-          {/* Study */}
+        <div className="flex gap-2 pt-3 border-t" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
           <button
             onClick={() => router.push(`/quizzes/study/${quiz.id}`)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold font-mono transition-all hover:brightness-110"
@@ -412,44 +263,24 @@ const QuizCard = ({
             <Play className="w-3.5 h-3.5" /> study
           </button>
 
-          {/* Edit — owner only */}
           {isOwner && (
             <button
               onClick={() => router.push(`/quizzes/${quiz.id}/edit`)}
               className="px-3 py-2 rounded-xl text-xs font-mono transition-all"
-              style={{
-                border: `1px solid rgb(var(--theme-glow) / 0.15)`,
-                color: "var(--muted-foreground)",
-                backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  "var(--theme-primary)";
-                (e.currentTarget as HTMLButtonElement).style.color =
-                  "var(--theme-primary)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  `rgb(var(--theme-glow) / 0.15)`;
-                (e.currentTarget as HTMLButtonElement).style.color =
-                  "var(--muted-foreground)";
-              }}
+              style={{ border: `1px solid rgb(var(--theme-glow) / 0.15)`, color: "var(--muted-foreground)", backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--theme-primary)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--theme-primary)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = `rgb(var(--theme-glow) / 0.15)`; (e.currentTarget as HTMLButtonElement).style.color = "var(--muted-foreground)"; }}
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
           )}
 
-          {/* Remove / Delete */}
           {confirming ? (
             <>
               <button
                 onClick={() => setConfirming(false)}
                 className="px-3 py-2 rounded-xl text-xs font-mono transition-all"
-                style={{
-                  border: `1px solid rgb(var(--theme-glow) / 0.15)`,
-                  color: "var(--muted-foreground)",
-                  backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-                }}
+                style={{ border: `1px solid rgb(var(--theme-glow) / 0.15)`, color: "var(--muted-foreground)", backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}
               >
                 cancel
               </button>
@@ -457,11 +288,7 @@ const QuizCard = ({
                 onClick={handleRemove}
                 disabled={removing}
                 className="px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all disabled:opacity-40"
-                style={{
-                  backgroundColor: "rgb(239 68 68 / 0.1)",
-                  color: "#ef4444",
-                  border: "1px solid rgb(239 68 68 / 0.3)",
-                }}
+                style={{ backgroundColor: "rgb(239 68 68 / 0.1)", color: "#ef4444", border: "1px solid rgb(239 68 68 / 0.3)" }}
               >
                 {removing ? "..." : isOwner ? "delete_for_all" : "confirm"}
               </button>
@@ -470,22 +297,9 @@ const QuizCard = ({
             <button
               onClick={() => setConfirming(true)}
               className="px-3 py-2 rounded-xl text-xs font-mono transition-all"
-              style={{
-                border: `1px solid rgb(var(--theme-glow) / 0.15)`,
-                color: "var(--muted-foreground)",
-                backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  "rgb(239 68 68 / 0.4)";
-                (e.currentTarget as HTMLButtonElement).style.color = "#ef4444";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  `rgb(var(--theme-glow) / 0.15)`;
-                (e.currentTarget as HTMLButtonElement).style.color =
-                  "var(--muted-foreground)";
-              }}
+              style={{ border: `1px solid rgb(var(--theme-glow) / 0.15)`, color: "var(--muted-foreground)", backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgb(239 68 68 / 0.4)"; (e.currentTarget as HTMLButtonElement).style.color = "#ef4444"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = `rgb(var(--theme-glow) / 0.15)`; (e.currentTarget as HTMLButtonElement).style.color = "var(--muted-foreground)"; }}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -501,16 +315,15 @@ const QuizCollectionPage = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient();
-      const [
-        {
-          data: { user },
-        },
-        data,
-      ] = await Promise.all([supabase.auth.getUser(), getMyQuizCollection()]);
+      const [{ data: { user } }, data] = await Promise.all([
+        supabase.auth.getUser(),
+        getMyQuizCollection(),
+      ]);
       setCurrentUserId(user?.id ?? null);
       setQuizzes(data);
       setLoading(false);
@@ -519,12 +332,15 @@ const QuizCollectionPage = () => {
   }, []);
 
   const handleRemove = async (quizId: string, isOwner: boolean) => {
-    if (isOwner) {
-      await deleteQuiz(quizId);
-    } else {
-      await deleteQuizAttempt(quizId);
-    }
+    if (isOwner) await deleteQuiz(quizId);
+    else await deleteQuizAttempt(quizId);
     setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
+    setExpandedId((prev) => (prev === quizId ? null : prev));
+  };
+
+  const handleToggleExpand = (quizId: string) => {
+    if (!quizId) return;
+    setExpandedId((prev) => (prev === quizId ? null : quizId));
   };
 
   return (
@@ -537,36 +353,24 @@ const QuizCollectionPage = () => {
 
       <div
         style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 0,
-          opacity: 0.022,
+          position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.022,
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "128px 128px",
+          backgroundRepeat: "repeat", backgroundSize: "128px 128px",
         }}
       />
 
       <div className="relative z-10 min-h-screen bg-background text-foreground">
         <div className="max-w-4xl mx-auto px-6 pt-20 pb-24">
+
           <div className="page-enter mb-10">
-            <div
-              className="flex items-center gap-2 font-mono text-[11px] mb-7"
-              style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
-            >
-              <Terminal
-                className="w-3 h-3"
-                style={{ color: "var(--theme-primary)" }}
-              />
+            <div className="flex items-center gap-2 font-mono text-[11px] mb-7" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
+              <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
               <span>~/retainly/quizzes</span>
               <span style={{ color: `rgb(var(--theme-glow) / 0.2)` }}>—</span>
               <span>my collection</span>
             </div>
 
-            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">
-              My Quizzes
-            </h1>
+            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">My Quizzes</h1>
             <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
               Your personal quiz collection and study sessions.
             </p>
@@ -574,54 +378,25 @@ const QuizCollectionPage = () => {
             {!loading && (
               <div
                 className="flex items-center gap-5 mt-5 font-mono text-xs py-2.5 px-4 rounded-lg border w-fit"
-                style={{
-                  borderColor: `rgb(var(--theme-glow) / 0.12)`,
-                  backgroundColor: `rgb(var(--theme-glow) / 0.025)`,
-                }}
+                style={{ borderColor: `rgb(var(--theme-glow) / 0.12)`, backgroundColor: `rgb(var(--theme-glow) / 0.025)` }}
               >
-                <span style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
-                  $
-                </span>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>$</span>
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-                    total
-                  </span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>total</span>
+                  <span className="font-bold text-foreground">{quizzes.length}</span>
+                </div>
+                <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
+                <div className="flex items-center gap-1.5">
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>yours</span>
                   <span className="font-bold text-foreground">
-                    {quizzes.length}
+                    {quizzes.filter((q) => q.creator_id === currentUserId).length}
                   </span>
                 </div>
-                <div
-                  className="h-3 w-px"
-                  style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }}
-                />
+                <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-                    yours
-                  </span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>studied</span>
                   <span className="font-bold text-foreground">
-                    {
-                      quizzes.filter((q) => q.creator_id === currentUserId)
-                        .length
-                    }
-                  </span>
-                </div>
-                <div
-                  className="h-3 w-px"
-                  style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }}
-                />
-                <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-                    studied
-                  </span>
-                  <span className="font-bold text-foreground">
-                    {
-                      quizzes.filter(
-                        (q) =>
-                          q.user_score !== null &&
-                          q.user_score !== undefined &&
-                          q.user_score > 0,
-                      ).length
-                    }
+                    {quizzes.filter((q) => q.user_score != null && q.user_score > 0).length}
                   </span>
                 </div>
               </div>
@@ -630,34 +405,23 @@ const QuizCollectionPage = () => {
 
           <div className="page-enter stagger-1">
             <SectionRule
-              label={
-                loading
-                  ? "// LOADING..."
-                  : `// ${quizzes.length} QUIZ${quizzes.length !== 1 ? "ZES" : ""} IN COLLECTION`
-              }
+              label={loading ? "// LOADING..." : `// ${quizzes.length} QUIZ${quizzes.length !== 1 ? "ZES" : ""} IN COLLECTION`}
             />
 
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div
                     key={i}
                     className="rounded-2xl border animate-pulse h-48"
-                    style={{
-                      borderColor: `rgb(var(--theme-glow) / 0.1)`,
-                      backgroundColor: `rgb(var(--theme-glow) / 0.03)`,
-                    }}
+                    style={{ borderColor: `rgb(var(--theme-glow) / 0.1)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}
                   />
                 ))}
               </div>
             ) : quizzes.length === 0 ? (
               <div className="text-center py-16 font-mono">
-                <div
-                  className="text-xs mb-4"
-                  style={{ color: `rgb(var(--theme-glow) / 0.3)` }}
-                >
-                  <span style={{ color: "var(--theme-primary)" }}>$</span> ls
-                  -la
+                <div className="text-xs mb-4" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
+                  <span style={{ color: "var(--theme-primary)" }}>$</span> ls -la
                   <br />
                   <span className="mt-2 block">// no quizzes yet</span>
                 </div>
@@ -668,34 +432,29 @@ const QuizCollectionPage = () => {
                   <button
                     onClick={() => router.push("/quizzes/generate")}
                     className="px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all"
-                    style={{
-                      background: "var(--theme-primary)",
-                      color: "#fff",
-                    }}
+                    style={{ background: "var(--theme-primary)", color: "#fff" }}
                   >
                     + create_quiz
                   </button>
                   <button
                     onClick={() => router.push("/quizzes/browse")}
                     className="px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all"
-                    style={{
-                      border: `1px solid rgb(var(--theme-glow) / 0.2)`,
-                      color: "var(--muted-foreground)",
-                      backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
-                    }}
+                    style={{ border: `1px solid rgb(var(--theme-glow) / 0.2)`, color: "var(--muted-foreground)", backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}
                   >
                     <Globe className="w-3.5 h-3.5 inline mr-1" /> browse
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {quizzes.map((quiz) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                {quizzes.map((quiz, idx) => (
                   <QuizCard
-                    key={quiz.id}
+                    key={quiz.id ?? `fallback-${idx}`}
                     quiz={quiz}
                     currentUserId={currentUserId}
                     onRemove={handleRemove}
+                    expanded={!!quiz.id && expandedId === quiz.id}
+                    onToggleExpand={() => handleToggleExpand(quiz.id)}
                   />
                 ))}
               </div>
@@ -703,21 +462,13 @@ const QuizCollectionPage = () => {
           </div>
 
           <div className="mt-16 flex items-center gap-4">
-            <div
-              className="flex-1 h-px"
-              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }}
-            />
-            <span
-              className="font-mono text-[10px] tracking-[0.25em]"
-              style={{ color: `rgb(var(--theme-glow) / 0.3)` }}
-            >
+            <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
+            <span className="font-mono text-[10px] tracking-[0.25em]" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
               RETAINLY
             </span>
-            <div
-              className="flex-1 h-px"
-              style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }}
-            />
+            <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
           </div>
+
         </div>
       </div>
     </>
