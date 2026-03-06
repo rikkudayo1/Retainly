@@ -27,8 +27,14 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // If no user and not already on /auth, redirect to /auth
-  if (!user && !request.nextUrl.pathname.startsWith("/auth")) {
+  const { pathname } = request.nextUrl;
+
+  // If no user and not on a public route, redirect to /auth
+  if (
+    !user &&
+    !pathname.startsWith("/auth") &&      // login page
+    !pathname.startsWith("/api/cron")     // cron jobs don't need auth
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
     return NextResponse.redirect(url);
