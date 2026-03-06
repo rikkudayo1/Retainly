@@ -2,6 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip middleware entirely for cron routes
+  if (pathname.startsWith("/api/cron")) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -25,19 +32,19 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // IMPORTANT: Do not run any code between createServerClient and getUser()
+  // that could interfere with the session refresh
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
-  // If no user and not on a public route, redirect to /auth
-  if (
-    !user &&
-    !pathname.startsWith("/auth") &&      // login page
-    !pathname.startsWith("/api/cron")     // cron jobs don't need auth
-  ) {
+  if (!user && !pathname.startsWith("/auth")) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
-    return NextResponse.redirect(url);
+    // Use the redirect but carry over the cookies supabase may have set
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
   }
 
   return supabaseResponse;
