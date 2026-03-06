@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase";
+import { postFeedEventToMyGroups } from "@/lib/db/groups";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -354,20 +355,37 @@ export const addQuizToCollection = async (
 // Call this at the end of a study session.
 export const saveQuizScore = async (
   quizId: string,
-  score: number
-): Promise<{ error: string | null }> => {
+  score: number // raw correct count, e.g. 7 out of 10
+): Promise<void> => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
+  if (!user) return;
 
-  const { error } = await supabase
+  // Upsert the attempt (keep existing behaviour)
+  await supabase
     .from("quiz_attempts")
     .upsert(
-      { user_id: user.id, quiz_id: quizId, score, updated_at: new Date().toISOString() },
+      { user_id: user.id, quiz_id: quizId, score },
       { onConflict: "user_id,quiz_id" }
     );
 
-  return { error: error ? error.message : null };
+  // Fetch quiz title for the feed payload (non-blocking)
+  const { data: quiz } = await supabase
+    .from("quizzes")
+    .select("title, question_count")
+    .eq("id", quizId)
+    .maybeSingle();
+
+  // Fire-and-forget feed event — never blocks the caller
+  postFeedEventToMyGroups("quiz_score", {
+    quiz_id: quizId,
+    quiz_title: quiz?.title ?? "Quiz",
+    score,
+    question_count: quiz?.question_count ?? 10,
+    percent: quiz?.question_count
+      ? Math.round((score / quiz.question_count) * 100)
+      : null,
+  });
 };
 
 export const getQuizAttempt = async (

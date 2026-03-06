@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { addGemsDB } from "@/lib/db";
+import { postFeedEventToMyGroups } from "@/lib/db/groups";
 
 const DAILY_REWARD = 30;
 
@@ -34,6 +35,7 @@ export const useStreak = () => {
       let newStreakDay = profile.streak_day ?? 0;
       let shouldShowStreak = false;
       let shouldShowReward = false;
+      let streakBroke = false;
 
       // ── Streak calculation ──────────────────────────────────
       if (profile.last_seen === today) {
@@ -43,6 +45,10 @@ export const useStreak = () => {
         newStreak = profile.streak + 1;
         shouldShowStreak = true;
       } else {
+        // Streak broke — only fire feed event if they had a streak worth mentioning
+        if ((profile.streak ?? 0) >= 3) {
+          streakBroke = true;
+        }
         newStreak = 1;
         newStreakDay = 0;
         shouldShowStreak = true;
@@ -67,6 +73,19 @@ export const useStreak = () => {
 
       setStreak(newStreak);
       setStreakDay(newStreakDay);
+
+      // ── Feed events (fire-and-forget) ───────────────────────
+      if (profile.last_seen !== today) {
+        if (streakBroke) {
+          postFeedEventToMyGroups("streak_broke", {
+            streak: profile.streak,
+          });
+        } else if (shouldShowStreak && newStreak > 1) {
+          postFeedEventToMyGroups("streak_extended", {
+            streak: newStreak,
+          });
+        }
+      }
 
       if (shouldShowStreak) {
         setShowStreakPopup(true);

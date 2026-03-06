@@ -1,7 +1,5 @@
 "use client";
 
-import { logActivity } from "@/lib/db";
-
 interface StreakPopupProps {
   streak: number;
   onDismiss: () => void;

@@ -26,14 +26,53 @@ Output this exact shape:
 }
 
 ═══ SUMMARY ═══
-Markdown: # main title, ## section headings, **bold** key terms, bullet lists, short scannable paragraphs.
+Write a COMPREHENSIVE markdown summary that covers ALL major topics in the source material. This is the most important field — do not skimp on it.
+
+Format rules — follow these EXACTLY:
+- # for the main topic title (on its own line, followed by a blank line)
+- ## for each major section or subtopic (minimum 3 sections) — each ## heading must be on its own line, preceded by a blank line and followed by a blank line before the paragraph text
+- **bold** every key term on first use
+- Bullet points for lists of items, steps, or examples
+- 2–4 sentences per section paragraph — enough to actually explain the concept, not just name it
+
+CRITICAL LINE BREAK RULE: Every heading (#, ##, ###) must be on its own separate line. Never place a heading mid-sentence or immediately after text on the same line. The structure must look exactly like this:
+
+# Main Title
+
+## Section One
+
+Content for section one goes here on a new line after a blank line.
+
+## Section Two
+
+Content for section two goes here.
+
+NEVER produce output like this: "some text ## Heading more text" — headings must always be on their own line with blank lines around them.
+
+Length and depth rules:
+- MINIMUM: cover every major section or concept present in the source
+- Each ## section must have at least 2–3 sentences of explanation beneath it
+- Do NOT write a one-liner summary like "This document covers X biology." That is not a summary — it is a title.
+- Do NOT just list topic names. Explain what each topic means and why it matters.
+- If the source has 5 sections, your summary must have at least 5 ## headings with real content under each
+
+BAD summary (never do this):
+  # ชีววิทยา ม.4
+  เอกสารนี้ครอบคลุมเนื้อหาชีววิทยาระดับมัธยมปลาย
+
+GOOD summary (do this):
+  # ชีววิทยา ม.4 — พันธุศาสตร์เมนเดล
+  ## กฎการแยกตัว (Law of Segregation)
+  กฎข้อแรกของเมนเดลระบุว่าสิ่งมีชีวิตแต่ละชนิดมียีนเป็นคู่ และเมื่อเกิดการสืบพันธุ์ ยีนแต่ละคู่จะแยกออกจากกัน...
+  ## ตารางพันเนต (Punnett Square)
+  ตารางพันเนตเป็นเครื่องมือที่ใช้ทำนายอัตราส่วนของลักษณะที่สืบทอดในรุ่นลูกหลาน...
 
 ═══ KEY CONCEPTS (minimum 5) ═══
 Full-sentence definitions explaining purpose and why it matters — not one-liners.
 BAD: "Integer — a whole number."
 GOOD: "Integer — a numeric data type storing whole numbers without decimals, used for counting, indexing, and operations where fractional values would be meaningless."
 
-═══ FLASHCARDS (minimum depends on the provided information, make sure it's not too few, if it's words list make sure to cover all of it, for example Kanji word lists, Thai word lists, etc.) ═══
+═══ FLASHCARDS (minimum 5) ═══
 KEYWORD: canonical form — Japanese: always 漢字 (よみかた), never kana-only, never せんせい (せんせい). Code/formulas: exact notation.
 HINT: one sentence guiding recall. Must NOT contain the keyword, a synonym, or the answer.
 EXPLANATION: definition + context + usage example + memory hook.

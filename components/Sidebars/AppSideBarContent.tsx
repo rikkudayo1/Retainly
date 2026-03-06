@@ -5,6 +5,7 @@ import Main from "./Collapsibles/Main";
 import Generate from "./Collapsibles/Generate";
 import Gacha from "./Collapsibles/Gacha";
 import Quiz from "./Collapsibles/Quiz";
+import Social from "./Collapsibles/Social";
 import Link from "next/link";
 import Settings from "./Collapsibles/ProfileSetting";
 import { HomeIcon } from "lucide-react";
@@ -19,7 +20,6 @@ const AppSideBarContent = () => {
         <Link
           className="flex items-center gap-2.5 p-2 w-full rounded-lg text-sm text-muted-foreground hover:text-foreground transition-all group"
           href="/"
-          style={{}}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLAnchorElement).style.backgroundColor = `rgb(var(--theme-glow) / 0.08)`;
             (e.currentTarget as HTMLAnchorElement).style.color = `var(--theme-badge-text)`;
@@ -37,6 +37,7 @@ const AppSideBarContent = () => {
           <Quiz />
           <Generate />
           <Gacha />
+          <Social />
           <Settings />
         </div>
       </SidebarGroup>
