@@ -1,10 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware entirely for cron routes
+  console.log("[proxy] running on:", pathname);
+
   if (pathname.startsWith("/api/cron")) {
     return NextResponse.next();
   }
@@ -32,14 +33,14 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Do not run any code between createServerClient and getUser()
-  // that could interfere with the session refresh
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  console.log("[proxy] user:", user?.id ?? "null", "error:", error?.message ?? "none", "path:", pathname);
 
   if (!user && !pathname.startsWith("/auth")) {
+    console.log("[proxy] no user, redirecting to /auth");
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
-    // Use the redirect but carry over the cookies supabase may have set
     const redirectResponse = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
