@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getMyQuizCollection, deleteQuizAttempt, deleteQuiz, Quiz } from "@/lib/db";
 import { createClient } from "@/lib/supabase";
+import { useLanguage } from "@/context/LanguageContext";
 
 const SectionRule = ({ label }: { label: string }) => (
   <div className="flex items-center gap-4 mb-6">
@@ -45,6 +46,7 @@ const QuizCard = ({
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
 
   const isOwner = !!currentUserId && currentUserId === quiz.creator_id;
 
@@ -62,11 +64,12 @@ const QuizCard = ({
   const timeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
     const days = Math.floor(diff / 86400000);
-    if (days === 0) return "today";
-    if (days === 1) return "yesterday";
-    if (days < 30) return `${days}d_ago`;
+    if (days === 0) return t("qc.time_today");
+    if (days === 1) return t("qc.time_yesterday");
+    if (days < 30) return t("qc.time_days").replace("{n}", String(days));
     const months = Math.floor(days / 30);
-    return months < 12 ? `${months}mo_ago` : `${Math.floor(months / 12)}y_ago`;
+    if (months < 12) return t("qc.time_months").replace("{n}", String(months));
+    return t("qc.time_years").replace("{n}", String(Math.floor(months / 12)));
   };
 
   const scoreColor =
@@ -77,10 +80,10 @@ const QuizCard = ({
 
   const scoreLabel =
     scorePercent === null   ? null
-    : scorePercent === 100  ? "perfect"
-    : scorePercent >= 80    ? "great"
-    : scorePercent >= 50    ? "okay"
-    : "retry";
+    : scorePercent === 100  ? t("qc.score_perfect")
+    : scorePercent >= 80    ? t("qc.score_great")
+    : scorePercent >= 50    ? t("qc.score_okay")
+    : t("qc.score_retry");
 
   return (
     <div
@@ -99,7 +102,7 @@ const QuizCard = ({
         <div className="flex items-center gap-2">
           {quiz.is_published && (
             <span className="font-mono text-[9px] flex items-center gap-1" style={{ color: "#22c55e" }}>
-              <Globe className="w-2.5 h-2.5" /> public
+              <Globe className="w-2.5 h-2.5" /> {t("qc.card_public")}
             </span>
           )}
           {isOwner && (
@@ -107,7 +110,7 @@ const QuizCard = ({
               className="font-mono text-[9px] px-1.5 py-0.5 rounded"
               style={{ backgroundColor: `rgb(var(--theme-glow) / 0.08)`, color: "var(--theme-primary)", border: `1px solid rgb(var(--theme-glow) / 0.12)` }}
             >
-              yours
+              {t("qc.card_yours")}
             </span>
           )}
         </div>
@@ -140,8 +143,12 @@ const QuizCard = ({
             </Link>
           )}
           <div className="flex items-center gap-3 font-mono text-[10px] mt-2" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-            <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {quiz.question_count} questions</span>
-            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{timeAgo(quiz.created_at)}</span>
+            <span className="flex items-center gap-1">
+              <Zap className="w-3 h-3" /> {quiz.question_count} {t("qc.questions")}
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />{timeAgo(quiz.created_at)}
+            </span>
             {quiz.star_count > 0 && (
               <span className="flex items-center gap-1"><Star className="w-3 h-3" /> {quiz.star_count}</span>
             )}
@@ -151,7 +158,7 @@ const QuizCard = ({
         {/* Score bar */}
         <div className="space-y-1">
           <div className="flex items-center justify-between font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-            <span>// best_score</span>
+            <span>{t("qc.label_best_score")}</span>
             <span className="flex items-center gap-1.5">
               {scoreLabel && (
                 <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ backgroundColor: `${scoreColor}18`, color: scoreColor }}>
@@ -184,7 +191,7 @@ const QuizCard = ({
               className="w-3 h-3 transition-transform duration-200"
               style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
             />
-            {expanded ? "// collapse" : "// show_details"}
+            {expanded ? t("qc.label_collapse") : t("qc.label_details")}
           </button>
         )}
 
@@ -196,7 +203,9 @@ const QuizCard = ({
           >
             {quiz.description && (
               <div className="px-3 py-2.5 border-b" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
-                <p className="text-[9px] mb-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// description</p>
+                <p className="text-[9px] mb-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                  {t("qc.label_description")}
+                </p>
                 <p className="leading-relaxed" style={{ color: "var(--muted-foreground)", fontFamily: "inherit", fontSize: "11px" }}>
                   {quiz.description}
                 </p>
@@ -205,17 +214,17 @@ const QuizCard = ({
 
             <div className="flex">
               <div className="flex-1 px-3 py-2 flex flex-col gap-0.5">
-                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>// questions</span>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>{t("qc.label_questions")}</span>
                 <span className="font-bold text-foreground">{quiz.question_count}</span>
               </div>
               <div className="flex-1 px-3 py-2 flex flex-col gap-0.5" style={{ borderLeft: `1px solid rgb(var(--theme-glow) / 0.08)` }}>
-                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>// best_score</span>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>{t("qc.label_best_score")}</span>
                 <span className="font-bold" style={{ color: scoreColor }}>
-                  {scorePercent !== null ? `${scorePercent}%` : "not_played"}
+                  {scorePercent !== null ? `${scorePercent}%` : t("qc.not_played")}
                 </span>
               </div>
               <div className="flex-1 px-3 py-2 flex flex-col gap-0.5" style={{ borderLeft: `1px solid rgb(var(--theme-glow) / 0.08)` }}>
-                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>// stars</span>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.35)`, fontSize: "9px" }}>{t("qc.label_stars")}</span>
                 <span className="font-bold text-foreground flex items-center gap-1">
                   <Star className="w-3 h-3" style={{ color: "#f59e0b" }} />
                   {quiz.star_count}
@@ -225,7 +234,9 @@ const QuizCard = ({
 
             {(quiz.questions?.length ?? 0) > 0 && (
               <div className="px-3 py-2.5 border-t" style={{ borderColor: `rgb(var(--theme-glow) / 0.08)` }}>
-                <p className="text-[9px] mb-2" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// sample_questions</p>
+                <p className="text-[9px] mb-2" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                  {t("qc.label_samples")}
+                </p>
                 <div className="space-y-1.5">
                   {quiz.questions.slice(0, 3).map((q: any, i: number) => (
                     <div key={i} className="flex items-start gap-2">
@@ -242,7 +253,7 @@ const QuizCard = ({
                   ))}
                   {quiz.questions.length > 3 && (
                     <p className="text-[9px] pl-6" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                      +{quiz.questions.length - 3} more...
+                      {t("qc.more").replace("{n}", String(quiz.questions.length - 3))}
                     </p>
                   )}
                 </div>
@@ -260,7 +271,7 @@ const QuizCard = ({
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold font-mono transition-all hover:brightness-110"
             style={{ background: "var(--theme-primary)", color: "#fff" }}
           >
-            <Play className="w-3.5 h-3.5" /> study
+            <Play className="w-3.5 h-3.5" /> {t("qc.action_study")}
           </button>
 
           {isOwner && (
@@ -282,7 +293,7 @@ const QuizCard = ({
                 className="px-3 py-2 rounded-xl text-xs font-mono transition-all"
                 style={{ border: `1px solid rgb(var(--theme-glow) / 0.15)`, color: "var(--muted-foreground)", backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}
               >
-                cancel
+                {t("qc.action_cancel")}
               </button>
               <button
                 onClick={handleRemove}
@@ -290,7 +301,7 @@ const QuizCard = ({
                 className="px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all disabled:opacity-40"
                 style={{ backgroundColor: "rgb(239 68 68 / 0.1)", color: "#ef4444", border: "1px solid rgb(239 68 68 / 0.3)" }}
               >
-                {removing ? "..." : isOwner ? "delete_for_all" : "confirm"}
+                {removing ? t("qc.action_removing") : isOwner ? t("qc.action_delete_all") : t("qc.action_confirm")}
               </button>
             </>
           ) : (
@@ -312,6 +323,7 @@ const QuizCard = ({
 
 const QuizCollectionPage = () => {
   const router = useRouter();
+  const { t } = useLanguage();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -343,6 +355,12 @@ const QuizCollectionPage = () => {
     setExpandedId((prev) => (prev === quizId ? null : quizId));
   };
 
+  const sectionLabel = loading
+    ? t("qc.section_loading")
+    : quizzes.length === 1
+    ? t("qc.section_count").replace("{n}", String(quizzes.length))
+    : t("qc.section_count_pl").replace("{n}", String(quizzes.length));
+
   return (
     <>
       <style>{`
@@ -365,14 +383,14 @@ const QuizCollectionPage = () => {
           <div className="page-enter mb-10">
             <div className="flex items-center gap-2 font-mono text-[11px] mb-7" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
               <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-              <span>~/retainly/quizzes</span>
+              <span>{t("qc.breadcrumb")}</span>
               <span style={{ color: `rgb(var(--theme-glow) / 0.2)` }}>—</span>
-              <span>my collection</span>
+              <span>{t("qc.subtitle_bc")}</span>
             </div>
 
-            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">My Quizzes</h1>
+            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">{t("qc.title")}</h1>
             <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
-              Your personal quiz collection and study sessions.
+              {t("qc.subtitle")}
             </p>
 
             {!loading && (
@@ -382,19 +400,19 @@ const QuizCollectionPage = () => {
               >
                 <span style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>$</span>
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>total</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qc.stat_total")}</span>
                   <span className="font-bold text-foreground">{quizzes.length}</span>
                 </div>
                 <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>yours</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qc.stat_yours")}</span>
                   <span className="font-bold text-foreground">
                     {quizzes.filter((q) => q.creator_id === currentUserId).length}
                   </span>
                 </div>
                 <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>studied</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qc.stat_studied")}</span>
                   <span className="font-bold text-foreground">
                     {quizzes.filter((q) => q.user_score != null && q.user_score > 0).length}
                   </span>
@@ -404,9 +422,7 @@ const QuizCollectionPage = () => {
           </div>
 
           <div className="page-enter stagger-1">
-            <SectionRule
-              label={loading ? "// LOADING..." : `// ${quizzes.length} QUIZ${quizzes.length !== 1 ? "ZES" : ""} IN COLLECTION`}
-            />
+            <SectionRule label={sectionLabel} />
 
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
@@ -421,12 +437,12 @@ const QuizCollectionPage = () => {
             ) : quizzes.length === 0 ? (
               <div className="text-center py-16 font-mono">
                 <div className="text-xs mb-4" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                  <span style={{ color: "var(--theme-primary)" }}>$</span> ls -la
+                  <span style={{ color: "var(--theme-primary)" }}>{t("qc.empty_cmd")}</span>
                   <br />
-                  <span className="mt-2 block">// no quizzes yet</span>
+                  <span className="mt-2 block">{t("qc.empty_none")}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Create your first quiz or browse community quizzes.
+                  {t("qc.empty_sub")}
                 </p>
                 <div className="flex gap-3 justify-center mt-4">
                   <button
@@ -434,14 +450,14 @@ const QuizCollectionPage = () => {
                     className="px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all"
                     style={{ background: "var(--theme-primary)", color: "#fff" }}
                   >
-                    + create_quiz
+                    {t("qc.btn_create")}
                   </button>
                   <button
                     onClick={() => router.push("/quizzes/browse")}
                     className="px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all"
                     style={{ border: `1px solid rgb(var(--theme-glow) / 0.2)`, color: "var(--muted-foreground)", backgroundColor: `rgb(var(--theme-glow) / 0.04)` }}
                   >
-                    <Globe className="w-3.5 h-3.5 inline mr-1" /> browse
+                    <Globe className="w-3.5 h-3.5 inline mr-1" /> {t("qc.btn_browse")}
                   </button>
                 </div>
               </div>
@@ -464,7 +480,7 @@ const QuizCollectionPage = () => {
           <div className="mt-16 flex items-center gap-4">
             <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
             <span className="font-mono text-[10px] tracking-[0.25em]" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-              RETAINLY
+              {t("qc.footer")}
             </span>
             <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
           </div>

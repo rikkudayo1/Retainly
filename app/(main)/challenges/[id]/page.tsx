@@ -12,6 +12,8 @@ import {
 } from "@/lib/db";
 import { createClient } from "@/lib/supabase";
 import { useGemsContext } from "@/context/GemsContext";
+import { useLanguage } from "@/context/LanguageContext";
+import type { TranslationKey } from "@/lib/translations";
 
 const CHOICE_LABELS = ["A", "B", "C", "D"];
 
@@ -25,10 +27,11 @@ interface QuizResult {
 
 // ── Score comparison card ─────────────────────────────────────
 const ScoreCard = ({
-  label, username, avatar, score, total, isWinner,
+  label, username, avatar, score, total, isWinner, t,
 }: {
   label: string; username: string; avatar: string | null | undefined;
   score: number; total: number; isWinner: boolean;
+  t: (key: TranslationKey) => string;
 }) => {
   const pct = Math.round((score / total) * 100);
   return (
@@ -57,12 +60,12 @@ const ScoreCard = ({
         {pct}<span className="text-xl font-bold text-muted-foreground">%</span>
       </div>
       <p className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-        {score}/{total} correct
+        {t("cd.score_correct").replace("{n}", String(score)).replace("{total}", String(total))}
       </p>
       {isWinner && (
         <span className="font-mono text-[10px] px-2 py-0.5 rounded"
           style={{ backgroundColor: "var(--theme-primary)", color: "#fff" }}>
-          winner
+          {t("cd.score_winner")}
         </span>
       )}
     </div>
@@ -71,6 +74,7 @@ const ScoreCard = ({
 
 // ── Main ──────────────────────────────────────────────────────
 const ChallengePage = () => {
+  const { t } = useLanguage();
   const { id: challengeId } = useParams<{ id: string }>();
   const router = useRouter();
   const { addGems } = useGemsContext();
@@ -194,11 +198,11 @@ const ChallengePage = () => {
   if (pageState === "notfound" || pageState === "unauthorized") return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground gap-3">
       <p className="font-mono text-sm" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-        {pageState === "unauthorized" ? "// access_denied" : "// challenge_not_found"}
+        {pageState === "unauthorized" ? t("cd.unauthorized") : t("cd.notfound")}
       </p>
       <button onClick={() => router.push("/quizzes")}
         className="text-sm font-mono mt-2" style={{ color: "var(--theme-primary)" }}>
-        ← back_to_quizzes
+        {t("cd.back")}
       </button>
     </div>
   );
@@ -217,7 +221,7 @@ const ChallengePage = () => {
             <div className="flex items-center gap-2 font-mono text-[11px]"
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
               <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-              <span>~/retainly/challenge</span>
+              <span>{t("cd.breadcrumb")}</span>
             </div>
 
             <div className="rounded-2xl border overflow-hidden"
@@ -226,7 +230,7 @@ const ChallengePage = () => {
                 style={{ borderColor: `rgb(var(--theme-glow) / 0.08)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}>
                 <Swords className="w-3.5 h-3.5" style={{ color: "var(--theme-primary)" }} />
                 <span className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-                  // challenge_received
+                  {t("cd.lobby_header")}
                 </span>
               </div>
 
@@ -247,7 +251,7 @@ const ChallengePage = () => {
                   <div>
                     <p className="font-bold text-sm">@{challenge.challenger_username}</p>
                     <p className="font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-                      challenges you to beat their score
+                      {t("cd.challenges_you")}
                     </p>
                   </div>
                 </div>
@@ -255,10 +259,12 @@ const ChallengePage = () => {
                 {/* Quiz info */}
                 <div className="rounded-xl border px-4 py-3"
                   style={{ borderColor: `rgb(var(--theme-glow) / 0.12)`, backgroundColor: `rgb(var(--theme-glow) / 0.02)` }}>
-                  <p className="font-mono text-[10px] mb-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// quiz</p>
+                  <p className="font-mono text-[10px] mb-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                    {t("cd.lobby_quiz_label")}
+                  </p>
                   <p className="font-bold text-sm">{challenge.quiz_title}</p>
                   <p className="font-mono text-[10px] mt-1" style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
-                    {challenge.question_count} questions
+                    {t("cd.lobby_questions").replace("{n}", String(challenge.question_count))}
                   </p>
                 </div>
 
@@ -266,7 +272,7 @@ const ChallengePage = () => {
                 <div className="flex items-center justify-between rounded-xl border px-4 py-3"
                   style={{ borderColor: "rgb(var(--theme-glow) / 0.12)", backgroundColor: "rgb(var(--theme-glow) / 0.02)" }}>
                   <span className="font-mono text-xs" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-                    their score to beat
+                    {t("cd.lobby_score_label")}
                   </span>
                   <span className="font-black text-2xl" style={{ color: "var(--theme-primary)" }}>
                     {challengerPct}<span className="text-base font-bold text-muted-foreground">%</span>
@@ -278,14 +284,14 @@ const ChallengePage = () => {
                   className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:opacity-90"
                   style={{ background: "var(--theme-primary)", color: "#fff" }}
                 >
-                  <Swords className="w-4 h-4" /> accept_challenge
+                  <Swords className="w-4 h-4" /> {t("cd.accept_btn")}
                 </button>
               </div>
             </div>
 
             {/* Expires note */}
             <p className="text-center font-mono text-[10px]" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-              expires {new Date(challenge.expires_at).toLocaleDateString()}
+              {t("cd.expires").replace("{date}", new Date(challenge.expires_at).toLocaleDateString())}
             </p>
           </div>
         </div>
@@ -339,7 +345,7 @@ const ChallengePage = () => {
                 </span>
                 <span className="font-mono text-[10px] flex items-center gap-1"
                   style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                  <Swords className="w-3 h-3" /> challenge_mode
+                  <Swords className="w-3 h-3" /> {t("cd.challenge_mode")}
                 </span>
               </div>
               <div className="px-5 py-5">
@@ -398,7 +404,9 @@ const ChallengePage = () => {
                   <div className="rounded-xl border px-4 py-3.5 text-sm"
                     style={{ borderColor: `rgb(var(--theme-glow) / 0.12)`, backgroundColor: `rgb(var(--theme-glow) / 0.03)` }}>
                     <span className="font-mono text-[10px] block mb-1.5"
-                      style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>// explanation</span>
+                      style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
+                      {t("cd.explanation")}
+                    </span>
                     <span className="text-muted-foreground leading-relaxed">{currentQ.explanation}</span>
                   </div>
                 )}
@@ -409,8 +417,10 @@ const ChallengePage = () => {
                   style={{ background: "var(--theme-primary)", color: "#fff" }}
                 >
                   {currentIndex + 1 >= questions.length
-                    ? saving ? <><Loader2 className="w-4 h-4 animate-spin" /> saving...</> : <><Trophy className="w-4 h-4" /> see_results</>
-                    : <>next <ArrowRight className="w-4 h-4" /></>}
+                    ? saving
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("cd.saving")}</>
+                      : <><Trophy className="w-4 h-4" /> {t("cd.see_results")}</>
+                    : <>{t("cd.next")} <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
             )}
@@ -445,7 +455,7 @@ const ChallengePage = () => {
               <div className="flex items-center gap-2 font-mono text-[11px] mb-6"
                 style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
                 <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-                <span>~/retainly/challenge/results</span>
+                <span>{t("cd.breadcrumb_results")}</span>
               </div>
 
               {/* Verdict banner */}
@@ -457,15 +467,19 @@ const ChallengePage = () => {
                 <Trophy className="w-8 h-8 mx-auto mb-2"
                   style={{ color: challengeeWon ? "var(--theme-primary)" : tie ? "#f59e0b" : `rgb(var(--theme-glow) / 0.3)` }} />
                 <p className="text-2xl font-black">
-                  {tie ? "It's a tie!" : challengeeWon ? "You won! 🎉" : "You lost"}
+                  {tie ? t("cd.verdict_tie") : challengeeWon ? t("cd.verdict_won") : t("cd.verdict_lost")}
                 </p>
                 <p className="font-mono text-xs mt-1" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-                  {tie ? "same score — well matched" : challengeeWon ? "you beat the challenge" : `@${challenge.challenger_username} wins this round`}
+                  {tie
+                    ? t("cd.verdict_tie_sub")
+                    : challengeeWon
+                      ? t("cd.verdict_won_sub")
+                      : t("cd.verdict_lost_sub").replace("{user}", challenge.challenger_username ?? "")}
                 </p>
                 {gemsEarned > 0 && (
                   <div className="flex items-center justify-center gap-1.5 mt-3 font-mono text-xs"
                     style={{ color: "var(--theme-badge-text)" }}>
-                    <Gem className="w-3.5 h-3.5" /> +{gemsEarned} gems earned
+                    <Gem className="w-3.5 h-3.5" /> {t("cd.gems_earned").replace("{n}", String(gemsEarned))}
                   </div>
                 )}
               </div>
@@ -473,20 +487,22 @@ const ChallengePage = () => {
               {/* Side-by-side score comparison */}
               <div className="flex gap-3">
                 <ScoreCard
-                  label="challenger"
+                  label={t("cd.score_challenger")}
                   username={`@${challenge.challenger_username ?? "?"}`}
                   avatar={challenge.challenger_avatar}
                   score={challengerScore}
                   total={total}
                   isWinner={challengerWon}
+                  t={t}
                 />
                 <ScoreCard
-                  label="you"
+                  label={t("cd.score_you")}
                   username={`@${challenge.challengee_username ?? "you"}`}
                   avatar={challenge.challengee_avatar}
                   score={challengeeScore}
                   total={total}
                   isWinner={challengeeWon}
+                  t={t}
                 />
               </div>
             </div>
@@ -498,7 +514,7 @@ const ChallengePage = () => {
                 className="flex-1 py-3 rounded-xl font-bold text-sm font-mono transition-all flex items-center justify-center gap-2"
                 style={{ border: `1px solid rgb(var(--theme-glow) / 0.2)`, backgroundColor: `rgb(var(--theme-glow) / 0.04)`, color: "var(--theme-badge-text)" }}
               >
-                ← quizzes
+                {t("cd.action_quizzes")}
               </button>
               {quiz && (
                 <button
@@ -506,7 +522,7 @@ const ChallengePage = () => {
                   className="flex-1 py-3 rounded-xl font-bold text-sm font-mono transition-all flex items-center justify-center gap-2 hover:opacity-90"
                   style={{ background: "var(--theme-primary)", color: "#fff" }}
                 >
-                  <ArrowRight className="w-4 h-4" /> study_again
+                  <ArrowRight className="w-4 h-4" /> {t("cd.action_study")}
                 </button>
               )}
             </div>

@@ -10,9 +10,10 @@ import {
   FriendProfile,
 } from "@/lib/db";
 import {
-  Terminal, UserCheck, UserX, Users, Flame, Loader2, Inbox,
+  Terminal, UserCheck, UserX, Users, Flame, Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
 
 const SectionRule = ({ label, count }: { label: string; count?: number }) => (
   <div className="flex items-center gap-4 mb-5">
@@ -45,6 +46,7 @@ const Avatar = ({ user }: { user: FriendProfile }) => (
 );
 
 const FriendsPage = () => {
+  const { t } = useLanguage();
   const router = useRouter();
   const [friends, setFriends] = useState<FriendProfile[]>([]);
   const [pending, setPending] = useState<FriendProfile[]>([]);
@@ -100,11 +102,11 @@ const FriendsPage = () => {
             <div className="flex items-center gap-2 font-mono text-[11px]"
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
               <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-              <span>~/retainly/friends</span>
+              <span>{t("friends.breadcrumb")}</span>
             </div>
-            <h1 className="text-5xl font-black tracking-tight leading-none">Friends</h1>
+            <h1 className="text-5xl font-black tracking-tight leading-none">{t("friends.title")}</h1>
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
-              Study together, compete, and challenge each other.
+              {t("friends.subtitle")}
             </p>
           </div>
 
@@ -112,14 +114,14 @@ const FriendsPage = () => {
             <div className="flex items-center gap-2 font-mono text-xs py-8"
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
               <Loader2 className="w-3 h-3 animate-spin" style={{ color: "var(--theme-primary)" }} />
-              loading...
+              {t("friends.loading")}
             </div>
           ) : (
             <>
               {/* ── Pending requests ── */}
               {pending.length > 0 && (
                 <div className="page-enter stagger-1">
-                  <SectionRule label="// PENDING_REQUESTS" count={pending.length} />
+                  <SectionRule label={t("friends.section_pending")} count={pending.length} />
                   <div className="space-y-2.5">
                     {pending.map((req) => (
                       <div key={req.friendship_id}
@@ -140,7 +142,7 @@ const FriendsPage = () => {
                               {req.streak}
                             </span>
                             <span style={{ color: `rgb(var(--theme-glow) / 0.2)` }}>·</span>
-                            <span>wants to be friends</span>
+                            <span>{t("friends.wants_friends")}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -152,7 +154,7 @@ const FriendsPage = () => {
                           >
                             {acting === req.friendship_id
                               ? <Loader2 className="w-3 h-3 animate-spin" />
-                              : <><UserCheck className="w-3 h-3" /> accept</>}
+                              : <><UserCheck className="w-3 h-3" /> {t("friends.accept")}</>}
                           </button>
                           <button
                             onClick={() => handleDecline(req.friendship_id)}
@@ -171,16 +173,16 @@ const FriendsPage = () => {
 
               {/* ── Friends list ── */}
               <div className="page-enter stagger-2">
-                <SectionRule label={`// FRIENDS`} count={friends.length} />
+                <SectionRule label={t("friends.section_friends")} count={friends.length} />
 
                 {friends.length === 0 ? (
                   <div className="text-center py-12 font-mono">
                     <Users className="w-8 h-8 mx-auto mb-3 opacity-20" />
                     <p className="text-xs" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                      // no friends yet
+                      {t("friends.empty_none")}
                     </p>
                     <p className="text-xs mt-1 text-muted-foreground">
-                      Visit someone's profile to send a friend request.
+                      {t("friends.empty_sub")}
                     </p>
                   </div>
                 ) : (
@@ -201,7 +203,7 @@ const FriendsPage = () => {
                             style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
                             <span className="flex items-center gap-1">
                               <Flame className="w-2.5 h-2.5" style={{ color: "#f97316" }} />
-                              {friend.streak} streak
+                              {t("friends.streak").replace("{n}", String(friend.streak))}
                             </span>
                           </div>
                         </div>
@@ -219,12 +221,12 @@ const FriendsPage = () => {
                               (e.currentTarget).style.color = `rgb(var(--theme-glow) / 0.5)`;
                             }}
                           >
-                            profile
+                            {t("friends.profile")}
                           </button>
                           <button
                             onClick={() => handleRemove(friend.friendship_id)}
                             disabled={acting === friend.friendship_id}
-                            title="Remove friend"
+                            title={t("friends.remove_title")}
                             className="p-1.5 rounded-xl font-mono text-xs border transition-all"
                             style={{ borderColor: `rgb(var(--theme-glow) / 0.12)`, color: `rgb(var(--theme-glow) / 0.3)` }}
                             onMouseEnter={(e) => {

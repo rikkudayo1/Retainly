@@ -11,6 +11,7 @@ import {
   getPublishedQuizzes, getPublishedQuizzesCount,
   toggleQuizStar, addQuizToCollection, Quiz,
 } from "@/lib/db";
+import { useLanguage } from "@/context/LanguageContext";
 
 const LIMIT = 8;
 type SortValue = "newest" | "stars" | "popular";
@@ -32,9 +33,9 @@ const PublicQuizCard = ({
   onToast: (message: string, error?: boolean) => void;
 }) => {
   const router = useRouter();
+  const { t } = useLanguage();
   const [starred, setStarred] = useState(quiz.is_starred ?? false);
   const [starCount, setStarCount] = useState(quiz.star_count);
-  // Local state so the button updates immediately after adding
   const [isAdded, setIsAdded] = useState(quiz.is_added ?? false);
   const [adding, setAdding] = useState(false);
 
@@ -52,21 +53,22 @@ const PublicQuizCard = ({
     const { error } = await addQuizToCollection(quiz.id);
     setAdding(false);
     if (error) {
-      onToast("Failed to add quiz. Try again.", true);
+      onToast(t("qb.toast_error"), true);
       return;
     }
     setIsAdded(true);
-    onToast(`"${quiz.title}" added to your collection!`);
+    onToast(t("qb.toast_added").replace("{title}", quiz.title));
   };
 
   const timeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
     const days = Math.floor(diff / 86400000);
-    if (days === 0) return "today";
-    if (days === 1) return "yesterday";
-    if (days < 30) return `${days}d_ago`;
+    if (days === 0) return t("qb.time_today");
+    if (days === 1) return t("qb.time_yesterday");
+    if (days < 30) return t("qb.time_days").replace("{n}", String(days));
     const months = Math.floor(days / 30);
-    return months < 12 ? `${months}mo_ago` : `${Math.floor(months / 12)}y_ago`;
+    if (months < 12) return t("qb.time_months").replace("{n}", String(months));
+    return t("qb.time_years").replace("{n}", String(Math.floor(months / 12)));
   };
 
   return (
@@ -126,10 +128,10 @@ const PublicQuizCard = ({
           style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
         >
           <span className="flex items-center gap-1">
-            <Zap className="w-3 h-3" /> {quiz.question_count} questions
+            <Zap className="w-3 h-3" /> {quiz.question_count} {t("qb.card_questions")}
           </span>
           <span className="flex items-center gap-1">
-            <Plus className="w-3 h-3" /> {quiz.add_count} Added
+            <Plus className="w-3 h-3" /> {quiz.add_count} {t("qb.card_added")}
           </span>
           <span>{timeAgo(quiz.created_at)}</span>
         </div>
@@ -137,9 +139,9 @@ const PublicQuizCard = ({
         {/* Creator */}
         {quiz.username && (
           <Link
-              href={`/profile/${quiz.username}`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 mt-1.5 w-fit transition-opacity hover:opacity-70"
+            href={`/profile/${quiz.username}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 mt-1.5 w-fit transition-opacity hover:opacity-70"
           >
             <div className="flex items-center gap-2">
               <div
@@ -165,18 +167,16 @@ const PublicQuizCard = ({
 
         {/* Actions */}
         <div className="flex gap-2">
-          {/* Study now — only visible if already added */}
           {isAdded && (
             <button
               onClick={() => router.push(`/quizzes/study/${quiz.id}`)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[3px] text-xs font-bold font-mono transition-all hover:brightness-110"
               style={{ background: "var(--theme-primary)", color: "#fff" }}
             >
-              <Play className="w-3.5 h-3.5" /> study
+              <Play className="w-3.5 h-3.5" /> {t("qb.card_study")}
             </button>
           )}
 
-          {/* Add / added button */}
           <button
             onClick={handleAdd}
             disabled={adding || isAdded}
@@ -193,11 +193,11 @@ const PublicQuizCard = ({
             }
           >
             {isAdded ? (
-              <><Check className="w-3.5 h-3.5" /> in_collection</>
+              <><Check className="w-3.5 h-3.5" /> {t("qb.card_in_collection")}</>
             ) : adding ? (
-              <span className="font-mono text-[10px]">$ adding...</span>
+              <span className="font-mono text-[10px]">{t("qb.card_adding")}</span>
             ) : (
-              <><Plus className="w-3.5 h-3.5" /> add_to_collection</>
+              <><Plus className="w-3.5 h-3.5" /> {t("qb.card_add")}</>
             )}
           </button>
         </div>
@@ -207,6 +207,7 @@ const PublicQuizCard = ({
 };
 
 const QuizBrowsePage = () => {
+  const { t } = useLanguage();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -251,17 +252,27 @@ const QuizBrowsePage = () => {
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, [showSortMenu]);
 
-  // Clear toast timer on unmount
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
 
   const sortLabels: Record<SortValue, string> = {
-    newest: "newest",
-    stars: "most_starred",
-    popular: "most_added",
+    newest:  t("qb.sort_newest"),
+    stars:   t("qb.sort_stars"),
+    popular: t("qb.sort_popular"),
   };
-  const dirLabels: Record<SortDir, string> = { desc: "descending", asc: "ascending" };
+  const dirLabels: Record<SortDir, string> = {
+    desc: t("qb.dir_desc"),
+    asc:  t("qb.dir_asc"),
+  };
+
+  const resultsLabel = loading
+    ? t("qb.section_loading")
+    : quizzes.length === 0
+    ? t("qb.section_none")
+    : total === 1
+    ? t("qb.section_found").replace("{n}", String(total))
+    : t("qb.section_found_pl").replace("{n}", String(total));
 
   const getPaginationPages = () => {
     const pages: (number | "...")[] = [];
@@ -347,14 +358,14 @@ const QuizBrowsePage = () => {
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}
             >
               <Globe className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-              <span>~/retainly/quizzes</span>
+              <span>{t("qb.breadcrumb")}</span>
               <span style={{ color: `rgb(var(--theme-glow) / 0.2)` }}>—</span>
-              <span>public quizzes</span>
+              <span>{t("qb.subtitle_bc")}</span>
             </div>
 
-            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">Public Quizzes</h1>
+            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">{t("qb.title")}</h1>
             <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
-              Discover and add community-created quizzes to your collection.
+              {t("qb.subtitle")}
             </p>
 
             {!loading && (
@@ -367,19 +378,19 @@ const QuizBrowsePage = () => {
               >
                 <span style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>$</span>
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>results</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qb.stat_results")}</span>
                   <span className="font-bold text-foreground">{total}</span>
                 </div>
                 <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>page</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qb.stat_page")}</span>
                   <span className="font-bold" style={{ color: "var(--theme-badge-text)" }}>
                     {page}/{totalPages || 1}
                   </span>
                 </div>
                 <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>sort</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qb.stat_sort")}</span>
                   <span className="font-bold" style={{ color: "var(--theme-badge-text)" }}>
                     {sortLabels[sortBy]} · {dirLabels[sortDir].slice(0, 3)}
                   </span>
@@ -393,7 +404,7 @@ const QuizBrowsePage = () => {
             className="page-enter stagger-1 mb-8"
             style={{ isolation: "isolate", position: "relative", zIndex: 50 }}
           >
-            <SectionRule label="// 01  SEARCH & FILTER" />
+            <SectionRule label={t("qb.section_filter")} />
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Search input */}
               <div
@@ -411,7 +422,7 @@ const QuizBrowsePage = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400/40" />
                   <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/40" />
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400/40" />
-                  <span className="ml-2">search.sh</span>
+                  <span className="ml-2">{t("qb.search_file")}</span>
                 </div>
                 <div className="relative flex">
                   <Search
@@ -420,7 +431,7 @@ const QuizBrowsePage = () => {
                   />
                   <input
                     className="flex-1 pl-10 pr-3 py-3 text-sm font-mono outline-none themed-input"
-                    placeholder="search quizzes..."
+                    placeholder={t("qb.search_ph")}
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
@@ -434,7 +445,7 @@ const QuizBrowsePage = () => {
                       color: "var(--theme-badge-text)",
                     }}
                   >
-                    $ run
+                    {t("qb.search_run")}
                   </button>
                 </div>
               </div>
@@ -477,12 +488,14 @@ const QuizBrowsePage = () => {
                       <span className="w-1.5 h-1.5 rounded-full bg-red-400/40" />
                       <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/40" />
                       <span className="w-1.5 h-1.5 rounded-full bg-green-400/40" />
-                      <span className="ml-2">sort.sh</span>
+                      <span className="ml-2">{t("qb.sort_file")}</span>
                     </div>
 
                     <div className="px-3 py-2">
                       <p className="font-mono text-[10px] tracking-widest mb-1"
-                        style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// sort_by</p>
+                        style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                        {t("qb.sort_by_label")}
+                      </p>
                       {(["newest", "stars", "popular"] as SortValue[]).map((s) => (
                         <button key={s} onClick={() => { setSortBy(s); setPage(1); }}
                           className="sort-item w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-all flex items-center justify-between"
@@ -500,7 +513,9 @@ const QuizBrowsePage = () => {
 
                     <div className="px-3 py-2">
                       <p className="font-mono text-[10px] tracking-widest mb-1"
-                        style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>// direction</p>
+                        style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>
+                        {t("qb.dir_label")}
+                      </p>
                       {(["desc", "asc"] as SortDir[]).map((d) => (
                         <button key={d} onClick={() => { setSortDir(d); setPage(1); setShowSortMenu(false); }}
                           className="sort-item w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-all flex items-center justify-between"
@@ -521,15 +536,7 @@ const QuizBrowsePage = () => {
 
           {/* Results */}
           <div className="page-enter stagger-2">
-            <SectionRule
-              label={
-                loading
-                  ? "// LOADING..."
-                  : quizzes.length === 0
-                  ? "// NO RESULTS"
-                  : `// ${total} QUIZ${total !== 1 ? "ZES" : ""} FOUND`
-              }
-            />
+            <SectionRule label={resultsLabel} />
 
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -551,11 +558,11 @@ const QuizBrowsePage = () => {
                   search --query=&quot;{search || "*"}&quot;
                   <br />
                   <span className="mt-2 block">
-                    // {search ? "no results found" : "no quizzes published yet"}
+                    {search ? t("qb.empty_no_results") : t("qb.empty_none")}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {search ? "Try a different search term." : "Be the first to publish a quiz!"}
+                  {search ? t("qb.empty_sub_search") : t("qb.empty_sub_none")}
                 </p>
                 {search && (
                   <button
@@ -567,7 +574,7 @@ const QuizBrowsePage = () => {
                       backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
                     }}
                   >
-                    ✕ clear_search
+                    {t("qb.clear_search")}
                   </button>
                 )}
               </div>
@@ -625,7 +632,7 @@ const QuizBrowsePage = () => {
           <div className="mt-16 flex items-center gap-4">
             <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
             <span className="font-mono text-[10px] tracking-[0.25em]"
-              style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>RETAINLY</span>
+              style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>{t("qb.footer")}</span>
             <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
           </div>
         </div>

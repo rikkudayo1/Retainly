@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getLeaderboard, LeaderboardEntry } from "@/lib/db";
 import { createClient } from "@/lib/supabase";
 import { Terminal, Gem } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 type Tab = "weekly" | "alltime";
 
@@ -14,7 +15,6 @@ function formatPoints(n: number) {
   return n.toLocaleString();
 }
 
-// Bar widths for rank list (percentage of max)
 const getBarWidth = (points: number, max: number) =>
   max === 0 ? 0 : Math.max(4, Math.round((points / max) * 100));
 
@@ -29,6 +29,7 @@ const getRankColor = (rank: number) =>
 
 const LeaderboardPage = () => {
   const router = useRouter();
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("weekly");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,13 +98,13 @@ const LeaderboardPage = () => {
             <div className="flex items-center gap-2 font-mono text-[11px]"
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
               <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-              <span>~/retainly/leaderboard</span>
+              <span>{t("lb.breadcrumb")}</span>
             </div>
             <h1 className="text-5xl font-black tracking-tight leading-none">
-              Leaderboard
+              {t("lb.title")}
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Points are earned from every study session · 1 activity = 100 pts
+              {t("lb.subtitle")}
             </p>
 
             {/* My rank badge */}
@@ -116,12 +117,12 @@ const LeaderboardPage = () => {
                   color: "var(--theme-badge-text)",
                 }}
               >
-                <span style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>your rank</span>
+                <span style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>{t("lb.your_rank")}</span>
                 <span className="font-bold" style={{ color: "var(--theme-primary)" }}>
                   #{myRank}
                 </span>
                 <span style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                  this {tab === "weekly" ? "week" : "time"}
+                  {tab === "weekly" ? t("lb.this_week") : t("lb.all_time")}
                 </span>
               </div>
             )}
@@ -135,26 +136,25 @@ const LeaderboardPage = () => {
               borderColor: `rgb(var(--theme-glow) / 0.12)`,
             }}
           >
-            {(["weekly", "alltime"] as Tab[]).map((t, i) => (
+            {(["weekly", "alltime"] as Tab[]).map((tabKey, i) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                key={tabKey}
+                onClick={() => setTab(tabKey)}
                 className="flex-1 py-2.5 font-mono text-xs tracking-wide transition-all duration-150"
                 style={{
-                  backgroundColor: tab === t ? `rgb(var(--theme-glow) / 0.1)` : "transparent",
-                  color: tab === t ? "var(--theme-badge-text)" : `rgb(var(--theme-glow) / 0.4)`,
-                  borderBottom: tab === t ? "2px solid var(--theme-primary)" : "2px solid transparent",
+                  backgroundColor: tab === tabKey ? `rgb(var(--theme-glow) / 0.1)` : "transparent",
+                  color: tab === tabKey ? "var(--theme-badge-text)" : `rgb(var(--theme-glow) / 0.4)`,
+                  borderBottom: tab === tabKey ? "2px solid var(--theme-primary)" : "2px solid transparent",
                   borderRight: i === 0 ? `1px solid rgb(var(--theme-glow) / 0.1)` : "none",
                 }}
               >
-                {t === "weekly" ? "this_week" : "all_time"}
+                {tabKey === "weekly" ? t("lb.tab_weekly") : t("lb.tab_alltime")}
               </button>
             ))}
           </div>
 
           {/* ── Podium (top 3) ──────────────────────────── */}
           {!loading && entries.length >= 1 && (() => {
-            // Ordered: 2nd | 1st | 3rd
             const podium = [
               { entry: entries[1] ?? null, rank: 2, height: 88 },
               { entry: entries[0] ?? null, rank: 1, height: 120 },
@@ -170,11 +170,11 @@ const LeaderboardPage = () => {
                   const color = getRankColor(rank);
                   const isMe = entry?.user_id === currentUserId;
                   const avatarSize = rank === 1 ? 56 : 44;
+                  const rankLabel = String(rank).padStart(2, "0");
 
                   return (
                     <div key={idx} className="flex flex-col items-center gap-2" style={{ flex: "1 1 0", maxWidth: 160 }}>
 
-                      {/* Avatar + label above bar */}
                       {entry ? (
                         <button
                           className="flex flex-col items-center gap-1.5 group"
@@ -200,7 +200,7 @@ const LeaderboardPage = () => {
                           </div>
                           <p className="font-mono text-[11px] font-bold text-center truncate w-full px-1"
                             style={{ color: isMe ? "var(--theme-primary)" : `rgb(var(--theme-glow) / 0.7)` }}>
-                            {isMe ? "you" : entry.username}
+                            {isMe ? t("lb.you") : entry.username}
                           </p>
                           <div className="flex items-center gap-1">
                             <Gem className="w-2.5 h-2.5" style={{ color: color ?? `rgb(var(--theme-glow) / 0.5)` }} />
@@ -229,7 +229,7 @@ const LeaderboardPage = () => {
                           className="font-mono text-xs font-black absolute top-3"
                           style={{ color: color ?? `rgb(var(--theme-glow) / 0.3)` }}
                         >
-                          {rank === 1 ? "01" : rank === 2 ? "02" : "03"}
+                          {rankLabel}
                         </span>
                       </div>
                     </div>
@@ -246,13 +246,13 @@ const LeaderboardPage = () => {
           >
             <span className="font-mono text-[10px] tracking-[0.2em] shrink-0"
               style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-              // RANKINGS
+              {t("lb.section")}
             </span>
             <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
             {!loading && entries.length > 0 && (
               <span className="font-mono text-[10px] shrink-0"
                 style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                {entries.length} entries
+                {entries.length} {t("lb.entries")}
               </span>
             )}
           </div>
@@ -263,10 +263,10 @@ const LeaderboardPage = () => {
               className="flex items-center gap-4 px-4 mb-2 font-mono text-[10px] tracking-widest"
               style={{ color: `rgb(var(--theme-glow) / 0.3)` }}
             >
-              <span className="w-7 text-center shrink-0">#</span>
-              <span className="flex-1">USER</span>
-              <span className="w-32 hidden sm:block">ACTIVITY</span>
-              <span className="w-16 text-right">PTS</span>
+              <span className="w-7 text-center shrink-0">{t("lb.col_rank")}</span>
+              <span className="flex-1">{t("lb.col_user")}</span>
+              <span className="w-32 hidden sm:block">{t("lb.col_activity")}</span>
+              <span className="w-16 text-right">{t("lb.col_pts")}</span>
             </div>
           )}
 
@@ -297,7 +297,7 @@ const LeaderboardPage = () => {
                           : "transparent",
                       }}
                     >
-                      {/* Background bar (data viz) */}
+                      {/* Background bar */}
                       <div
                         className="absolute inset-y-0 left-0 pointer-events-none bar-grow"
                         style={{
@@ -338,7 +338,7 @@ const LeaderboardPage = () => {
                       <div className="flex-1 min-w-0 relative z-10">
                         <p className="font-medium text-sm truncate">
                           {isMe
-                            ? <span style={{ color: "var(--theme-primary)" }}>you</span>
+                            ? <span style={{ color: "var(--theme-primary)" }}>{t("lb.you")}</span>
                             : entry.username}
                           {isMe && (
                             <span className="font-mono text-[10px] ml-2"
@@ -380,15 +380,13 @@ const LeaderboardPage = () => {
           {!loading && entries.length === 0 && (
             <div className="text-center py-12 font-mono">
               <p className="text-xs mb-2" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                <span style={{ color: "var(--theme-primary)" }}>$</span> ls -la
+                <span style={{ color: "var(--theme-primary)" }}>{t("lb.empty_cmd")}</span>
               </p>
               <p className="text-xs" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                // no entries found
+                {t("lb.empty_none")}
               </p>
               <p className="text-xs mt-1" style={{ color: `rgb(var(--theme-glow) / 0.2)` }}>
-                {tab === "weekly"
-                  ? "be the first to study this week"
-                  : "start studying to claim your spot"}
+                {tab === "weekly" ? t("lb.empty_weekly") : t("lb.empty_alltime")}
               </p>
             </div>
           )}

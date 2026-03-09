@@ -20,12 +20,6 @@ import { useLanguage } from "@/context/LanguageContext";
 const words_en = ["Retain", "Remember", "Master", "Absorb", "Learn"];
 const words_th = ["จดจำ", "ทบทวน", "เชี่ยวชาญ", "ซึมซับ", "เรียนรู้"];
 
-const STEPS = [
-  { icon: <Upload className="w-4 h-4" />, step: "01", title: "Upload", desc: "Drop in any document, PDF, or text" },
-  { icon: <Cpu className="w-4 h-4" />, step: "02", title: "Generate", desc: "AI creates summaries, quizzes & cards" },
-  { icon: <Trophy className="w-4 h-4" />, step: "03", title: "Master", desc: "Study, track streaks, climb leaderboard" },
-];
-
 const SectionRule = ({ label }: { label: string }) => (
   <div className="flex items-center gap-4 mb-10">
     <span
@@ -66,6 +60,13 @@ const HomePage = () => {
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const words = lang === "th" ? words_th : words_en;
+
+  // Steps are now built inside the component so t() is available
+  const STEPS = [
+    { icon: <Upload className="w-4 h-4" />, step: "01", title: t("home.step1.title"), desc: t("home.step1.desc") },
+    { icon: <Cpu className="w-4 h-4" />,    step: "02", title: t("home.step2.title"), desc: t("home.step2.desc") },
+    { icon: <Trophy className="w-4 h-4" />, step: "03", title: t("home.step3.title"), desc: t("home.step3.desc") },
+  ];
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -288,8 +289,8 @@ const HomePage = () => {
               <div className="flex items-center gap-2">
                 <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>status</span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                  <span className="text-yellow-400 font-bold">DEMO</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-green-400 font-bold">READY</span>
                 </span>
               </div>
             </div>
@@ -302,7 +303,7 @@ const HomePage = () => {
             className={`reveal mb-20 ${isVisible("steps") ? "visible" : ""}`}
             style={{ animationDelay: "120ms" }}
           >
-            <SectionRule label="// 01  HOW IT WORKS" />
+            <SectionRule label={t("home.steps.label")} />
             <div className="grid grid-cols-3 gap-6">
               {STEPS.map((step, i) => (
                 <div key={i} className="relative">
@@ -344,7 +345,7 @@ const HomePage = () => {
             className={`reveal ${isVisible("features") ? "visible" : ""}`}
             style={{ animationDelay: "180ms" }}
           >
-            <SectionRule label="// 02  FEATURES" />
+            <SectionRule label={t("home.features.label")} />
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Primary — 2 cols, tall */}

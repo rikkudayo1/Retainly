@@ -33,6 +33,7 @@ const PublishedQuizCard = ({
   onUnpublish: (id: string) => void;
   onDelete: (id: string) => void;
 }) => {
+  const { t } = useLanguage();
   const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const router = useRouter();
@@ -40,11 +41,13 @@ const PublishedQuizCard = ({
   const timeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
     const days = Math.floor(diff / 86400000);
-    if (days === 0) return "today";
-    if (days === 1) return "yesterday";
-    if (days < 30) return `${days}d_ago`;
+    if (days === 0) return t("qp.time_today");
+    if (days === 1) return t("qp.time_yesterday");
+    if (days < 30) return t("qp.time_days").replace("{n}", String(days));
     const months = Math.floor(days / 30);
-    return months < 12 ? `${months}mo_ago` : `${Math.floor(months / 12)}y_ago`;
+    return months < 12
+      ? t("qp.time_months").replace("{n}", String(months))
+      : t("qp.time_years").replace("{n}", String(Math.floor(months / 12)));
   };
 
   return (
@@ -83,10 +86,10 @@ const PublishedQuizCard = ({
         <div className="flex items-center gap-3 font-mono text-[10px]"
           style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
           <span className="flex items-center gap-1">
-            <Zap className="w-3 h-3" /> {quiz.question_count} q&apos;s
+            <Zap className="w-3 h-3" /> {t("qp.card_qs").replace("{n}", String(quiz.question_count))}
           </span>
           <span className="flex items-center gap-1">
-            <Upload className="w-3 h-3" /> {quiz.add_count} added
+            <Upload className="w-3 h-3" /> {t("qp.card_added").replace("{n}", String(quiz.add_count))}
           </span>
           <span>{timeAgo(quiz.created_at)}</span>
         </div>
@@ -102,7 +105,7 @@ const PublishedQuizCard = ({
               color: "var(--muted-foreground)",
               backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
             }}>
-            edit
+            {t("qp.card_edit")}
           </button>
 
           {confirmingUnpublish ? (
@@ -114,7 +117,7 @@ const PublishedQuizCard = ({
                   color: "var(--muted-foreground)",
                   backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
                 }}>
-                cancel
+                {t("qp.card_cancel")}
               </button>
               <button onClick={() => { setConfirmingUnpublish(false); onUnpublish(quiz.id); }}
                 className="flex-1 py-2 rounded-xl text-xs font-bold font-mono transition-all"
@@ -123,7 +126,7 @@ const PublishedQuizCard = ({
                   color: "#ef4444",
                   border: "1px solid rgb(239 68 68 / 0.3)",
                 }}>
-                confirm
+                {t("qp.card_confirm")}
               </button>
             </>
           ) : (
@@ -134,7 +137,7 @@ const PublishedQuizCard = ({
                 color: "var(--muted-foreground)",
                 backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
               }}>
-              <EyeOff className="w-3.5 h-3.5" /> unpublish
+              <EyeOff className="w-3.5 h-3.5" /> {t("qp.card_unpublish")}
             </button>
           )}
         </div>
@@ -150,7 +153,7 @@ const PublishedQuizCard = ({
                   color: "var(--muted-foreground)",
                   backgroundColor: `rgb(var(--theme-glow) / 0.04)`,
                 }}>
-                cancel
+                {t("qp.card_cancel")}
               </button>
               <button onClick={() => { setConfirmingDelete(false); onDelete(quiz.id); }}
                 className="flex-1 py-2 rounded-xl text-xs font-bold font-mono transition-all"
@@ -159,7 +162,7 @@ const PublishedQuizCard = ({
                   color: "#ef4444",
                   border: "1px solid rgb(239 68 68 / 0.3)",
                 }}>
-                confirm delete
+                {t("qp.card_confirm_delete")}
               </button>
             </>
           ) : (
@@ -170,7 +173,7 @@ const PublishedQuizCard = ({
                 color: "#ef4444",
                 backgroundColor: "rgb(239 68 68 / 0.04)",
               }}>
-              <Trash2 className="w-3.5 h-3.5" /> delete
+              <Trash2 className="w-3.5 h-3.5" /> {t("qp.card_delete")}
             </button>
           )}
         </div>
@@ -231,9 +234,9 @@ const QuizPublishPage = () => {
   };
 
   const handlePublish = async () => {
-    if (!selectedQuiz) { setError("Please select a quiz."); return; }
-    if (!title.trim()) { setError("Title is required."); return; }
-    if (!description.trim()) { setError("Description is required."); return; }
+    if (!selectedQuiz) { setError(t("qp.error_no_quiz")); return; }
+    if (!title.trim()) { setError(t("qp.error_no_title")); return; }
+    if (!description.trim()) { setError(t("qp.error_no_desc")); return; }
 
     setError("");
     setPublishing(true);
@@ -252,7 +255,7 @@ const QuizPublishPage = () => {
     setSelectedQuiz(null);
     setTitle("");
     setDescription("");
-    setSuccess("Quiz published successfully!");
+    setSuccess(t("qp.success"));
     setTimeout(() => setSuccess(""), 3000);
   };
 
@@ -331,14 +334,14 @@ const QuizPublishPage = () => {
             <div className="flex items-center gap-2 font-mono text-[11px] mb-7"
               style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
               <Globe className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-              <span>~/retainly/quizzes/publish</span>
+              <span>{t("qp.breadcrumb")}</span>
               <span style={{ color: `rgb(var(--theme-glow) / 0.2)` }}>—</span>
-              <span>share with community</span>
+              <span>{t("qp.breadcrumb_sub")}</span>
             </div>
 
-            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">Publish Quiz</h1>
+            <h1 className="text-5xl font-black tracking-tight leading-none mb-3">{t("qp.title")}</h1>
             <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
-              Share your quiz with the community so others can study it too.
+              {t("qp.subtitle")}
             </p>
 
             {!loading && (
@@ -349,18 +352,18 @@ const QuizPublishPage = () => {
                 }}>
                 <span style={{ color: `rgb(var(--theme-glow) / 0.35)` }}>$</span>
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>published</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qp.stat_published")}</span>
                   <span className="font-bold text-foreground">{publishedQuizzes.length}</span>
                 </div>
                 <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
                 <div className="flex items-center gap-1.5">
-                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>drafts</span>
+                  <span style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>{t("qp.stat_drafts")}</span>
                   <span className="font-bold text-foreground">{draftQuizzes.length}</span>
                 </div>
                 <div className="h-3 w-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.15)` }} />
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-emerald-400 font-bold">online</span>
+                  <span className="text-emerald-400 font-bold">{t("qp.stat_online")}</span>
                 </span>
               </div>
             )}
@@ -368,7 +371,7 @@ const QuizPublishPage = () => {
 
           {/* ── Publish form ── */}
           <div className="page-enter stagger-1 mb-10" style={{ position: "relative", zIndex: 10 }}>
-            <SectionRule label="// 01  NEW PUBLICATION" />
+            <SectionRule label={t("qp.section_new")} />
 
             <div className="rounded-2xl border overflow-visible"
               style={{
@@ -385,7 +388,7 @@ const QuizPublishPage = () => {
                 <span className="w-2 h-2 rounded-full bg-red-400/40" />
                 <span className="w-2 h-2 rounded-full bg-yellow-400/40" />
                 <span className="w-2 h-2 rounded-full bg-green-400/40" />
-                <span className="ml-3">publish.sh</span>
+                <span className="ml-3">{t("qp.terminal_label")}</span>
               </div>
 
               <div className="p-6 space-y-6">
@@ -394,7 +397,7 @@ const QuizPublishPage = () => {
                 <div>
                   <label className="block font-mono text-[10px] tracking-widest mb-2"
                     style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-                    // SELECT QUIZ <span style={{ color: "#ef4444" }}>*</span>
+                    {t("qp.field_quiz")} <span style={{ color: "#ef4444" }}>*</span>
                   </label>
 
                   <div ref={dropdownRef} className="relative" style={{ zIndex: 50 }}>
@@ -408,7 +411,7 @@ const QuizPublishPage = () => {
                       }}>
                       <div className="flex items-center gap-2 font-mono text-xs">
                         <FileText className="w-4 h-4 shrink-0" style={{ color: "var(--theme-primary)" }} />
-                        {selectedQuiz ? selectedQuiz.title : "select a quiz to publish..."}
+                        {selectedQuiz ? selectedQuiz.title : t("qp.quiz_ph")}
                       </div>
                       <ChevronDown className="w-4 h-4 transition-transform duration-200"
                         style={{
@@ -436,12 +439,13 @@ const QuizPublishPage = () => {
                           <span className="w-1.5 h-1.5 rounded-full bg-red-400/40" />
                           <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/40" />
                           <span className="w-1.5 h-1.5 rounded-full bg-green-400/40" />
-                          <span className="ml-2">quizzes.sh</span>
+                          <span className="ml-2">{t("qp.quiz_terminal")}</span>
                         </div>
 
                         {draftQuizzes.length === 0 ? (
                           <p className="text-xs font-mono text-muted-foreground px-4 py-3">
-                            <span style={{ color: "var(--theme-primary)" }}>$</span> ls — no unpublished quizzes found
+                            <span style={{ color: "var(--theme-primary)" }}>$</span>{" "}
+                            {t("qp.quiz_empty")}
                           </p>
                         ) : (
                           draftQuizzes.map((quiz) => (
@@ -455,7 +459,7 @@ const QuizPublishPage = () => {
                               <div className="flex items-center gap-2 shrink-0">
                                 <span className="font-mono text-[10px]"
                                   style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
-                                  {quiz.question_count} q&apos;s
+                                  {t("qp.card_qs").replace("{n}", String(quiz.question_count))}
                                 </span>
                                 {selectedQuiz?.id === quiz.id && (
                                   <span style={{ color: "var(--theme-primary)" }} className="text-xs">✓</span>
@@ -473,11 +477,11 @@ const QuizPublishPage = () => {
                 <div>
                   <label className="block font-mono text-[10px] tracking-widest mb-2"
                     style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-                    // TITLE <span style={{ color: "#ef4444" }}>*</span>
+                    {t("qp.field_title")} <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     className="themed-input"
-                    placeholder="e.g. Biology Chapter 4 — Cell Division..."
+                    placeholder={t("qp.title_ph")}
                     value={title}
                     onChange={(e) => { setTitle(e.target.value); setError(""); }}
                     maxLength={80}
@@ -488,7 +492,7 @@ const QuizPublishPage = () => {
                 <div>
                   <label className="block font-mono text-[10px] tracking-widest mb-2"
                     style={{ color: `rgb(var(--theme-glow) / 0.45)` }}>
-                    // DESCRIPTION <span style={{ color: "#ef4444" }}>*</span>
+                    {t("qp.field_desc")} <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <div className="rounded-xl border overflow-hidden"
                     style={{ borderColor: `rgb(var(--theme-glow) / 0.2)` }}>
@@ -502,7 +506,7 @@ const QuizPublishPage = () => {
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400/40" />
                         <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/40" />
                         <span className="w-1.5 h-1.5 rounded-full bg-green-400/40" />
-                        <span className="ml-2">description.txt</span>
+                        <span className="ml-2">{t("qp.desc_terminal")}</span>
                       </div>
                       <span style={{ color: description.length > 270 ? "#ef4444" : `rgb(var(--theme-glow) / 0.35)` }}>
                         {description.length}/300
@@ -516,7 +520,7 @@ const QuizPublishPage = () => {
                         minHeight: 90,
                         caretColor: "var(--theme-primary)",
                       }}
-                      placeholder="What is this quiz about? Who is it for?"
+                      placeholder={t("qp.desc_ph")}
                       value={description}
                       maxLength={300}
                       onChange={(e) => { setDescription(e.target.value); setError(""); }}
@@ -566,7 +570,7 @@ const QuizPublishPage = () => {
                   {publishing ? (
                     <>
                       <span className="font-mono text-xs tracking-widest" style={{ color: "rgba(255,255,255,0.7)" }}>
-                        publishing
+                        {t("qp.btn_publishing")}
                       </span>
                       <span className="flex gap-0.5">
                         {[0, 1, 2].map((i) => (
@@ -576,7 +580,7 @@ const QuizPublishPage = () => {
                       </span>
                     </>
                   ) : (
-                    <><Upload className="w-4 h-4" /> publish_quiz</>
+                    <><Upload className="w-4 h-4" /> {t("qp.btn_publish")}</>
                   )}
                 </button>
 
@@ -588,8 +592,8 @@ const QuizPublishPage = () => {
           <div className="page-enter stagger-2">
             <SectionRule label={
               loading
-                ? "// 02  LOADING..."
-                : `// 02  YOUR PUBLICATIONS (${publishedQuizzes.length})`
+                ? t("qp.section_loading")
+                : t("qp.section_yours").replace("{n}", String(publishedQuizzes.length))
             } />
 
             {loading ? (
@@ -602,11 +606,11 @@ const QuizPublishPage = () => {
             ) : publishedQuizzes.length === 0 ? (
               <div className="text-center py-12 font-mono">
                 <div className="text-xs mb-4" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-                  <span style={{ color: "var(--theme-primary)" }}>$</span> ls -la published/
+                  <span style={{ color: "var(--theme-primary)" }}>$</span> {t("qp.empty_cmd")}
                   <br />
-                  <span className="mt-2 block">// no published quizzes yet</span>
+                  <span className="mt-2 block">{t("qp.empty_none")}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">Publish your first quiz above.</p>
+                <p className="text-sm text-muted-foreground">{t("qp.empty_sub")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -626,7 +630,7 @@ const QuizPublishPage = () => {
           <div className="mt-16 flex items-center gap-4">
             <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
             <span className="font-mono text-[10px] tracking-[0.25em]" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>
-              RETAINLY
+              {t("qp.footer")}
             </span>
             <div className="flex-1 h-px" style={{ backgroundColor: `rgb(var(--theme-glow) / 0.1)` }} />
           </div>

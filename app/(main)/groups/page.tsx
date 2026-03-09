@@ -9,6 +9,10 @@ import {
 import { Terminal, Users, Plus, X, Loader2, ArrowRight, Hash } from "lucide-react";
 import { ImageCropModal } from "@/components/ImageCropModal";
 import { createClient } from "@/lib/supabase";
+import { useLanguage } from "@/context/LanguageContext";
+import type { TranslationKey } from "@/lib/translations";
+
+type TFn = (key: TranslationKey) => string;
 
 // ── Cover picker ───────────────────────────────────────────────
 const CoverDot = ({ cover, selected, onClick }: { cover: GroupCover; selected: boolean; onClick: () => void }) => (
@@ -25,7 +29,7 @@ const CoverDot = ({ cover, selected, onClick }: { cover: GroupCover; selected: b
 );
 
 // ── Discord-style Group card ───────────────────────────────────
-const GroupCard = ({ group, onClick }: { group: Group; onClick: () => void }) => {
+const GroupCard = ({ group, onClick, t }: { group: Group; onClick: () => void; t: TFn }) => {
   const style = COVER_STYLES[group.cover as GroupCover] ?? COVER_STYLES.purple;
   const roleColors: Record<string, string> = {
     owner: "#f59e0b",
@@ -35,6 +39,7 @@ const GroupCard = ({ group, onClick }: { group: Group; onClick: () => void }) =>
 
   const bannerUrl = (group as any).banner_url as string | null;
   const iconUrl = (group as any).icon_url as string | null;
+  const count = group.member_count ?? 0;
 
   return (
     <button
@@ -100,14 +105,16 @@ const GroupCard = ({ group, onClick }: { group: Group; onClick: () => void }) =>
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#22c55e" }} />
             <span className="font-mono text-[10px] md:text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-              {group.member_count} member{(group.member_count ?? 0) !== 1 ? "s" : ""}
+              {count === 1
+                ? t("grp.card_member_one").replace("{n}", String(count))
+                : t("grp.card_member_many").replace("{n}", String(count))}
             </span>
           </div>
           <div
             className="flex items-center gap-1 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg font-bold text-[11px] md:text-xs"
             style={{ background: `rgb(${style.glow} / 0.15)`, color: `rgb(${style.glow})` }}
           >
-            Open <ArrowRight className="w-3 h-3" />
+            {t("grp.card_open")} <ArrowRight className="w-3 h-3" />
           </div>
         </div>
       </div>
@@ -116,10 +123,11 @@ const GroupCard = ({ group, onClick }: { group: Group; onClick: () => void }) =>
 };
 
 // ── Create / Join modal ────────────────────────────────────────
-const Modal = ({ onClose, onCreated, onJoined }: {
+const Modal = ({ onClose, onCreated, onJoined, t }: {
   onClose: () => void;
   onCreated: (g: Group) => void;
   onJoined: (id: string) => void;
+  t: TFn;
 }) => {
   const [mode, setMode] = useState<"create" | "join">("create");
   const [name, setName] = useState("");
@@ -157,11 +165,11 @@ const Modal = ({ onClose, onCreated, onJoined }: {
   };
 
   const handleCreate = async () => {
-    if (!name.trim()) { setError("Group name is required"); return; }
+    if (!name.trim()) { setError(t("grp.error_name_required")); return; }
     setLoading(true); setError(null);
 
     const { data, error: err } = await createGroup({ name: name.trim(), subject: subject.trim() || undefined, cover });
-    if (err || !data) { setError(err ?? "Failed to create group"); setLoading(false); return; }
+    if (err || !data) { setError(err ?? t("grp.error_create_failed")); setLoading(false); return; }
 
     const supabase = createClient();
     const updates: Record<string, string> = {};
@@ -179,12 +187,12 @@ const Modal = ({ onClose, onCreated, onJoined }: {
   };
 
   const handleJoin = async () => {
-    if (!joinCode.trim()) { setError("Enter a join code"); return; }
+    if (!joinCode.trim()) { setError(t("grp.error_code_required")); return; }
     setLoading(true); setError(null);
     const { joinGroupByCode } = await import("@/lib/db");
     const { data, error: err } = await joinGroupByCode(joinCode.trim());
     setLoading(false);
-    if (err || !data) { setError(err ?? "Failed to join group"); return; }
+    if (err || !data) { setError(err ?? t("grp.error_join_failed")); return; }
     onJoined(data.id);
   };
 
@@ -228,7 +236,7 @@ const Modal = ({ onClose, onCreated, onJoined }: {
                 <button key={m} onClick={() => { setMode(m); setError(null); }}
                   className="px-4 py-1.5 rounded-md font-mono text-xs transition-all"
                   style={{ backgroundColor: mode === m ? "rgba(255,255,255,0.08)" : "transparent", color: mode === m ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)" }}>
-                  {m}
+                  {m === "create" ? t("grp.modal_tab_create") : t("grp.modal_tab_join")}
                 </button>
               ))}
             </div>
@@ -245,16 +253,16 @@ const Modal = ({ onClose, onCreated, onJoined }: {
                   {/* Banner */}
                   <div
                     className="w-full rounded-xl overflow-hidden relative cursor-pointer group/banner"
-                    style={{ height: 90, background: bannerPreview ? "transparent" : style.bg }}                    onClick={() => bannerInputRef.current?.click()}
+                    style={{ height: 90, background: bannerPreview ? "transparent" : style.bg }}
+                    onClick={() => bannerInputRef.current?.click()}
                   >
                     {bannerPreview && <img src={bannerPreview} alt="" className="w-full h-full object-cover" />}
-                    {/* Always-visible upload hint */}
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: bannerPreview ? "rgba(0,0,0,0)" : "rgba(0,0,0,0.15)" }}>
                       <div className="flex flex-col items-center gap-1 opacity-60 group-hover/banner:opacity-90 transition-opacity">
                         <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.4)" }}>
                           <Plus className="w-3.5 h-3.5 text-white" />
                         </div>
-                        <span className="font-mono text-[9px] text-white">upload banner</span>
+                        <span className="font-mono text-[9px] text-white">{t("grp.modal_banner_hint")}</span>
                       </div>
                     </div>
                   </div>
@@ -270,9 +278,8 @@ const Modal = ({ onClose, onCreated, onJoined }: {
                         ? <img src={iconPreview} alt="" className="w-full h-full object-cover" />
                         : <span className="font-black text-lg" style={{ color: `rgb(${style.glow})` }}>{name[0]?.toUpperCase() || "?"}</span>
                       }
-                      {/* Always-visible camera overlay */}
                       <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.3)" }}>
-                        <span className="font-mono text-[8px] text-white/70 group-hover/icon:text-white/95 transition-colors">icon</span>
+                        <span className="font-mono text-[8px] text-white/70 group-hover/icon:text-white/95 transition-colors">{t("grp.modal_icon_hint")}</span>
                       </div>
                     </div>
                   </div>
@@ -283,8 +290,8 @@ const Modal = ({ onClose, onCreated, onJoined }: {
 
                 {/* Name */}
                 <div>
-                  <label className="font-mono text-[10px] block mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>// group_name</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Study Squad" maxLength={40}
+                  <label className="font-mono text-[10px] block mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>{t("grp.modal_name_label")}</label>
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("grp.modal_name_ph")} maxLength={40}
                     className="w-full px-3 py-3 rounded-xl text-sm font-mono bg-transparent border outline-none transition-all"
                     style={{ borderColor: "rgba(255,255,255,0.1)", color: "var(--foreground)" }}
                     onFocus={(e) => (e.target.style.borderColor = `rgb(${style.glow})`)}
@@ -293,8 +300,8 @@ const Modal = ({ onClose, onCreated, onJoined }: {
 
                 {/* Subject */}
                 <div>
-                  <label className="font-mono text-[10px] block mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>// subject (optional)</label>
-                  <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Biology, Math, English..." maxLength={30}
+                  <label className="font-mono text-[10px] block mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>{t("grp.modal_subject_label")}</label>
+                  <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("grp.modal_subject_ph")} maxLength={30}
                     className="w-full px-3 py-3 rounded-xl text-sm font-mono bg-transparent border outline-none transition-all"
                     style={{ borderColor: "rgba(255,255,255,0.1)", color: "var(--foreground)" }}
                     onFocus={(e) => (e.target.style.borderColor = `rgb(${style.glow})`)}
@@ -303,7 +310,7 @@ const Modal = ({ onClose, onCreated, onJoined }: {
 
                 {/* Cover */}
                 <div>
-                  <label className="font-mono text-[10px] block mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>// color</label>
+                  <label className="font-mono text-[10px] block mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>{t("grp.modal_color_label")}</label>
                   <div className="flex gap-2 flex-wrap">
                     {GROUP_COVERS.map((c) => <CoverDot key={c} cover={c} selected={cover === c} onClick={() => setCover(c)} />)}
                   </div>
@@ -311,8 +318,8 @@ const Modal = ({ onClose, onCreated, onJoined }: {
               </>
             ) : (
               <div>
-                <label className="font-mono text-[10px] block mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>// join_code</label>
-                <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="RET-XXX" maxLength={7}
+                <label className="font-mono text-[10px] block mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>{t("grp.modal_code_label")}</label>
+                <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder={t("grp.modal_code_ph")} maxLength={7}
                   className="w-full px-3 py-3 rounded-xl text-sm font-mono bg-transparent border outline-none transition-all tracking-widest"
                   style={{ borderColor: "rgba(255,255,255,0.1)", color: "var(--foreground)" }}
                   onFocus={(e) => (e.target.style.borderColor = "var(--theme-primary)")}
@@ -331,8 +338,8 @@ const Modal = ({ onClose, onCreated, onJoined }: {
               {loading
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : mode === "create"
-                  ? <><Plus className="w-4 h-4" /> create_group</>
-                  : <><ArrowRight className="w-4 h-4" /> join_group</>
+                  ? <><Plus className="w-4 h-4" /> {t("grp.modal_create_btn")}</>
+                  : <><ArrowRight className="w-4 h-4" /> {t("grp.modal_join_btn")}</>
               }
             </button>
 
@@ -347,6 +354,7 @@ const Modal = ({ onClose, onCreated, onJoined }: {
 
 // ── Page ───────────────────────────────────────────────────────
 const GroupsPage = () => {
+  const { t } = useLanguage();
   const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -366,6 +374,7 @@ const GroupsPage = () => {
 
       {showModal && (
         <Modal
+          t={t}
           onClose={() => setShowModal(false)}
           onCreated={(g) => {
             setGroups((p) => [{ ...g, member_count: 1, my_role: "owner" }, ...p]);
@@ -384,11 +393,11 @@ const GroupsPage = () => {
             <div className="space-y-2 md:space-y-3">
               <div className="flex items-center gap-2 font-mono text-[11px] md:text-xs" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
                 <Terminal className="w-3 h-3" style={{ color: "var(--theme-primary)" }} />
-                <span>~/retainly/groups</span>
+                <span>{t("grp.breadcrumb")}</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none">Groups</h1>
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none">{t("grp.title")}</h1>
               <p className="text-sm md:text-base text-muted-foreground max-w-xs md:max-w-sm leading-relaxed">
-                Study together, compete on leaderboards, and tackle assignments.
+                {t("grp.subtitle")}
               </p>
             </div>
             <button
@@ -396,7 +405,7 @@ const GroupsPage = () => {
               className="shrink-0 flex items-center gap-1.5 px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-mono text-xs md:text-sm transition-all mt-6 md:mt-8"
               style={{ background: "var(--theme-primary)", color: "#fff" }}
             >
-              <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> new
+              <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> {t("grp.new_btn")}
             </button>
           </div>
 
@@ -405,26 +414,25 @@ const GroupsPage = () => {
             {loading ? (
               <div className="flex items-center gap-2 font-mono text-xs md:text-sm py-8" style={{ color: `rgb(var(--theme-glow) / 0.4)` }}>
                 <Loader2 className="w-3 h-3 animate-spin" style={{ color: "var(--theme-primary)" }} />
-                loading...
+                {t("grp.loading")}
               </div>
             ) : groups.length === 0 ? (
               <div className="text-center py-16 md:py-24 font-mono">
                 <Users className="w-10 h-10 md:w-14 md:h-14 mx-auto mb-4 opacity-20" />
-                <p className="text-xs md:text-sm" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>// no groups yet</p>
-                <p className="text-xs md:text-sm mt-1 text-muted-foreground">Create one or join with a code.</p>
+                <p className="text-xs md:text-sm" style={{ color: `rgb(var(--theme-glow) / 0.3)` }}>{t("grp.empty_none")}</p>
+                <p className="text-xs md:text-sm mt-1 text-muted-foreground">{t("grp.empty_sub")}</p>
                 <button
                   onClick={() => setShowModal(true)}
                   className="mt-5 flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-mono text-xs md:text-sm mx-auto transition-all"
                   style={{ background: "var(--theme-primary)", color: "#fff" }}
                 >
-                  <Plus className="w-3.5 h-3.5" /> get started
+                  <Plus className="w-3.5 h-3.5" /> {t("grp.empty_cta")}
                 </button>
               </div>
             ) : (
-              // 1 col mobile → 2 col sm → 3 col lg
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {groups.map((g) => (
-                  <GroupCard key={g.id} group={g} onClick={() => router.push(`/groups/${g.id}`)} />
+                  <GroupCard key={g.id} group={g} t={t} onClick={() => router.push(`/groups/${g.id}`)} />
                 ))}
               </div>
             )}
